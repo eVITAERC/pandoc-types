@@ -217,7 +217,7 @@ data QuoteType = SingleQuote | DoubleQuote deriving (Show, Eq, Ord, Read, Typeab
 type Target = (String, String)
 
 -- | Type of math element (display or inline).
-data MathType = DisplayMath | InlineMath deriving (Show, Eq, Ord, Read, Typeable, Data, Generic)
+data MathType = DisplayMath Attr | InlineMath deriving (Show, Eq, Ord, Read, Typeable, Data, Generic)
 
 -- | Inline elements.
 data Inline
