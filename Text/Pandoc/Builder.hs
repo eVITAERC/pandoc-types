@@ -342,9 +342,13 @@ linebreak = singleton LineBreak
 math :: String -> Inlines
 math = singleton . Math InlineMath
 
+-- | Display math with attributes
+displayMathWith :: Attr -> String -> Inlines
+displayMathWith attrs = singleton . Math (DisplayMath attrs)
+
 -- | Display math
 displayMath :: String -> Inlines
-displayMath = singleton . Math DisplayMath
+displayMath = displayMathWith nullAttr
 
 rawInline :: String -> String -> Inlines
 rawInline format = singleton . RawInline (Format format)
