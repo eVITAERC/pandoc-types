@@ -118,6 +118,7 @@ module Text.Pandoc.Builder ( module Text.Pandoc.Definition
                            , linebreak
                            , math
                            , displayMath
+                           , displayMathWith
                            , rawInline
                            , link
                            , image
