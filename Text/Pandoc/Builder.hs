@@ -30,9 +30,8 @@ Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 
 Convenience functions for building pandoc documents programmatically.
 
-Example of use:
+Example of use (with @OverloadedStrings@ pragma):
 
-> {-# LANGUAGE OverloadedStrings #-}
 > import Text.Pandoc.Builder
 >
 > myDoc :: Pandoc
@@ -47,16 +46,19 @@ Example of use:
 Isn't that nicer than writing the following?
 
 > import Text.Pandoc.Definition
+> import Data.Map (fromList)
 >
 > myDoc :: Pandoc
-> myDoc = Pandoc (Meta [("title", [Plain [Str "My",Space,Str "title"]])]
->  [Para [Str "This",Space,Str "is",Space,Str "the",Space,Str "first",
->   Space,Str "paragraph"]
->  ,Para [Str "And",Space,Emph [Str "another"],Str "."]
->  ,BulletList [[Para [Str "item",Space,Str "one"]
->               ,Para [Str "continuation"]]
->              ,[Plain [Str "item",Space,Str "two",Space,Str "and", Space,
->                 Str "a",Space,Link [Str "link"] ("/url","go to url")]]]]
+> myDoc = Pandoc (Meta {unMeta = fromList [("title",
+>           MetaInlines [Str "My",Space,Str "title"])]})
+>         [Para [Str "This",Space,Str "is",Space,Str "the",Space,Str "first",
+>          Space,Str "paragraph"],Para [Str "And",Space,Emph [Str "another"],
+>          Str "."]
+>         ,BulletList [
+>           [Para [Str "item",Space,Str "one"]
+>           ,Para [Str "continuation"]]
+>          ,[Plain [Str "item",Space,Str "two",Space,Str "and",Space,
+>                   Str "a",Space,Link [Str "link"] ("/url","go to url")]]]]
 
 And of course, you can use Haskell to define your own builders:
 
@@ -267,13 +269,13 @@ instance HasMeta Pandoc where
   deleteMeta key (Pandoc (Meta ms) bs) =
     Pandoc (Meta $ M.delete key ms) bs
 
-setTitle :: ToMetaValue a => a -> Pandoc -> Pandoc
+setTitle :: Inlines -> Pandoc -> Pandoc
 setTitle = setMeta "title"
 
-setAuthors :: ToMetaValue a => [a] -> Pandoc -> Pandoc
+setAuthors :: [Inlines] -> Pandoc -> Pandoc
 setAuthors = setMeta "author"
 
-setDate :: ToMetaValue a => a -> Pandoc -> Pandoc
+setDate :: Inlines -> Pandoc -> Pandoc
 setDate = setMeta "date"
 
 -- Inline list builders
