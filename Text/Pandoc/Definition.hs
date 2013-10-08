@@ -54,6 +54,8 @@ module Text.Pandoc.Definition ( Pandoc(..)
                               , MathType(..)
                               , Citation(..)
                               , CitationMode(..)
+                              , Reference(..)
+                              , ReferenceStyle(..)
                               ) where
 
 import Data.Generics (Data, Typeable)
@@ -230,6 +232,7 @@ data Inline
     | SmallCaps [Inline]    -- ^ Small caps text (list of inlines)
     | Quoted QuoteType [Inline] -- ^ Quoted text (list of inlines)
     | Cite [Citation]  [Inline] -- ^ Citation (list of inlines)
+    | Ref Reference String    -- ^ Reference (literal)
     | Code Attr String      -- ^ Inline code (literal)
     | Space                 -- ^ Inter-word space
     | LineBreak             -- ^ Hard line break
@@ -255,6 +258,17 @@ instance Ord Citation where
 
 data CitationMode = AuthorInText | SuppressAuthor | NormalCitation
                     deriving (Show, Eq, Ord, Read, Typeable, Data, Generic)
+
+data Reference = Reference { label          :: String
+                           , referenceStyle :: ReferenceStyle
+                           }
+                 deriving (Show, Eq, Read, Typeable, Data, Generic)
+
+instance Ord Reference where
+    compare = comparing label
+
+data ReferenceStyle = MinimalRef | ParenthesesRef
+                      deriving (Show, Eq, Ord, Read, Typeable, Data, Generic)
 
 -- derive generic instances of FromJSON, ToJSON:
 
@@ -293,6 +307,16 @@ instance ToJSON CitationMode
 instance FromJSON Citation
   where parseJSON = parseJSON'
 instance ToJSON Citation
+  where toJSON = toJSON'
+
+instance FromJSON ReferenceStyle
+  where parseJSON = parseJSON'
+instance ToJSON ReferenceStyle
+  where toJSON = toJSON'
+
+instance FromJSON Reference
+  where parseJSON = parseJSON'
+instance ToJSON Reference
   where toJSON = toJSON'
 
 instance FromJSON QuoteType
@@ -352,6 +376,12 @@ instance ToJSON CitationMode
 
 instance FromJSON Citation
 instance ToJSON Citation
+
+instance FromJSON ReferenceStyle
+instance ToJSON ReferenceStyle
+
+instance FromJSON Reference
+instance ToJSON Reference
 
 instance FromJSON QuoteType
 instance ToJSON QuoteType
