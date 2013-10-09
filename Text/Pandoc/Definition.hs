@@ -54,8 +54,8 @@ module Text.Pandoc.Definition ( Pandoc(..)
                               , MathType(..)
                               , Citation(..)
                               , CitationMode(..)
-                              , Reference(..)
-                              , ReferenceStyle(..)
+                              , NumberedReference(..)
+                              , NumberedReferenceStyle(..)
                               ) where
 
 import Data.Generics (Data, Typeable)
@@ -232,7 +232,7 @@ data Inline
     | SmallCaps [Inline]    -- ^ Small caps text (list of inlines)
     | Quoted QuoteType [Inline] -- ^ Quoted text (list of inlines)
     | Cite [Citation]  [Inline] -- ^ Citation (list of inlines)
-    | Ref Reference String    -- ^ Reference (literal)
+    | NumRef NumberedReference String -- ^ Reference (literal)
     | Code Attr String      -- ^ Inline code (literal)
     | Space                 -- ^ Inter-word space
     | LineBreak             -- ^ Hard line break
@@ -259,16 +259,16 @@ instance Ord Citation where
 data CitationMode = AuthorInText | SuppressAuthor | NormalCitation
                     deriving (Show, Eq, Ord, Read, Typeable, Data, Generic)
 
-data Reference = Reference { label          :: String
-                           , referenceStyle :: ReferenceStyle
-                           }
-                 deriving (Show, Eq, Read, Typeable, Data, Generic)
+data NumberedReference = NumberedReference { numRefLabel :: String
+                                           , numRefStyle :: NumberedReferenceStyle
+                                           }
+                         deriving (Show, Eq, Read, Typeable, Data, Generic)
 
-instance Ord Reference where
-    compare = comparing label
+instance Ord NumberedReference where
+    compare = comparing numRefLabel
 
-data ReferenceStyle = MinimalRef | ParenthesesRef
-                      deriving (Show, Eq, Ord, Read, Typeable, Data, Generic)
+data NumberedReferenceStyle = MinimalNumRef | ParenthesesNumRef
+                              deriving (Show, Eq, Ord, Read, Typeable, Data, Generic)
 
 -- derive generic instances of FromJSON, ToJSON:
 
@@ -309,14 +309,14 @@ instance FromJSON Citation
 instance ToJSON Citation
   where toJSON = toJSON'
 
-instance FromJSON ReferenceStyle
+instance FromJSON NumberedReferenceStyle
   where parseJSON = parseJSON'
-instance ToJSON ReferenceStyle
+instance ToJSON NumberedReferenceStyle
   where toJSON = toJSON'
 
-instance FromJSON Reference
+instance FromJSON NumberedReference
   where parseJSON = parseJSON'
-instance ToJSON Reference
+instance ToJSON NumberedReference
   where toJSON = toJSON'
 
 instance FromJSON QuoteType
@@ -377,11 +377,11 @@ instance ToJSON CitationMode
 instance FromJSON Citation
 instance ToJSON Citation
 
-instance FromJSON ReferenceStyle
-instance ToJSON ReferenceStyle
+instance FromJSON NumberedReferenceStyle
+instance ToJSON NumberedReferenceStyle
 
-instance FromJSON Reference
-instance ToJSON Reference
+instance FromJSON NumberedReference
+instance ToJSON NumberedReference
 
 instance FromJSON QuoteType
 instance ToJSON QuoteType
