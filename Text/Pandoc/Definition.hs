@@ -1,4 +1,4 @@
-{-# LANGUAGE DeriveDataTypeable, DeriveGeneric, FlexibleContexts, CPP #-}
+{-# LANGUAGE DeriveDataTypeable, DeriveGeneric, FlexibleContexts #-}
 
 {-
 Copyright (C) 2006-2013 John MacFarlane <jgm@berkeley.edu>
@@ -204,7 +204,7 @@ data Block
     | Header Int Attr [Inline] -- ^ Header - level (integer) and text (inlines)
     | HorizontalRule        -- ^ Horizontal rule
     | Table [Inline] [Alignment] [Double] [TableCell] [[TableCell]]  -- ^ Table,
-                            -- with caption, column alignments,
+                            -- with caption, column alignments (required),
                             -- relative column widths (0 = default),
                             -- column headers (each a list of blocks), and
                             -- rows (each a list of lists of blocks)
@@ -272,13 +272,12 @@ data NumberedReferenceStyle = MinimalNumRef | ParenthesesNumRef
 
 -- derive generic instances of FromJSON, ToJSON:
 
-#if MIN_VERSION_aeson(0,6,2)
 jsonOpts :: Aeson.Options
 jsonOpts = Aeson.Options{ Aeson.fieldLabelModifier = id
                         , Aeson.constructorTagModifier = id
-                        , Aeson.allNullaryToStringTag = True
+                        , Aeson.allNullaryToStringTag = False
                         , Aeson.omitNothingFields = False
-                        , Aeson.sumEncoding = Aeson.ObjectWithSingleField
+                        , Aeson.sumEncoding = Aeson.TaggedObject "t" "c"
                         }
 
 toJSON' :: (Generic a, Aeson.GToJSON (Rep a))
@@ -363,50 +362,3 @@ instance FromJSON Pandoc
   where parseJSON = parseJSON'
 instance ToJSON Pandoc
   where toJSON = toJSON'
-
-#else
-instance FromJSON MetaValue
-instance ToJSON MetaValue
-
-instance FromJSON Meta
-instance ToJSON Meta
-
-instance FromJSON CitationMode
-instance ToJSON CitationMode
-
-instance FromJSON Citation
-instance ToJSON Citation
-
-instance FromJSON NumberedReferenceStyle
-instance ToJSON NumberedReferenceStyle
-
-instance FromJSON NumberedReference
-instance ToJSON NumberedReference
-
-instance FromJSON QuoteType
-instance ToJSON QuoteType
-
-instance FromJSON MathType
-instance ToJSON MathType
-
-instance FromJSON ListNumberStyle
-instance ToJSON ListNumberStyle
-
-instance FromJSON ListNumberDelim
-instance ToJSON ListNumberDelim
-
-instance FromJSON Alignment
-instance ToJSON Alignment
-
-instance FromJSON Format
-instance ToJSON Format
-
-instance FromJSON Inline
-instance ToJSON Inline
-
-instance FromJSON Block
-instance ToJSON Block
-
-instance FromJSON Pandoc
-instance ToJSON Pandoc
-#endif
