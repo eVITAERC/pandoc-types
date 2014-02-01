@@ -54,6 +54,8 @@ module Text.Pandoc.Definition ( Pandoc(..)
                               , MathType(..)
                               , Citation(..)
                               , CitationMode(..)
+                              , NumberedReference(..)
+                              , NumberedReferenceStyle(..)
                               ) where
 
 import Data.Generics (Data, Typeable)
@@ -217,7 +219,7 @@ data QuoteType = SingleQuote | DoubleQuote deriving (Show, Eq, Ord, Read, Typeab
 type Target = (String, String)
 
 -- | Type of math element (display or inline).
-data MathType = DisplayMath | InlineMath deriving (Show, Eq, Ord, Read, Typeable, Data, Generic)
+data MathType = DisplayMath Attr | InlineMath deriving (Show, Eq, Ord, Read, Typeable, Data, Generic)
 
 -- | Inline elements.
 data Inline
@@ -230,6 +232,7 @@ data Inline
     | SmallCaps [Inline]    -- ^ Small caps text (list of inlines)
     | Quoted QuoteType [Inline] -- ^ Quoted text (list of inlines)
     | Cite [Citation]  [Inline] -- ^ Citation (list of inlines)
+    | NumRef NumberedReference String -- ^ Reference (literal)
     | Code Attr String      -- ^ Inline code (literal)
     | Space                 -- ^ Inter-word space
     | LineBreak             -- ^ Hard line break
@@ -255,6 +258,17 @@ instance Ord Citation where
 
 data CitationMode = AuthorInText | SuppressAuthor | NormalCitation
                     deriving (Show, Eq, Ord, Read, Typeable, Data, Generic)
+
+data NumberedReference = NumberedReference { numRefLabel :: String
+                                           , numRefStyle :: NumberedReferenceStyle
+                                           }
+                         deriving (Show, Eq, Read, Typeable, Data, Generic)
+
+instance Ord NumberedReference where
+    compare = comparing numRefLabel
+
+data NumberedReferenceStyle = MinimalNumRef | ParenthesesNumRef
+                              deriving (Show, Eq, Ord, Read, Typeable, Data, Generic)
 
 -- derive generic instances of FromJSON, ToJSON:
 
@@ -292,6 +306,16 @@ instance ToJSON CitationMode
 instance FromJSON Citation
   where parseJSON = parseJSON'
 instance ToJSON Citation
+  where toJSON = toJSON'
+
+instance FromJSON NumberedReferenceStyle
+  where parseJSON = parseJSON'
+instance ToJSON NumberedReferenceStyle
+  where toJSON = toJSON'
+
+instance FromJSON NumberedReference
+  where parseJSON = parseJSON'
+instance ToJSON NumberedReference
   where toJSON = toJSON'
 
 instance FromJSON QuoteType

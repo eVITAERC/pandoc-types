@@ -114,12 +114,14 @@ module Text.Pandoc.Builder ( module Text.Pandoc.Definition
                            , singleQuoted
                            , doubleQuoted
                            , cite
+                           , numRef
                            , codeWith
                            , code
                            , space
                            , linebreak
                            , math
                            , displayMath
+                           , displayMathWith
                            , rawInline
                            , link
                            , image
@@ -326,6 +328,9 @@ quoted qt = singleton . Quoted qt . toList
 cite :: [Citation] -> Inlines -> Inlines
 cite cts = singleton . Cite cts . toList
 
+numRef :: NumberedReference -> String -> Inlines
+numRef refspec = singleton . NumRef refspec
+
 -- | Inline code with attributes.
 codeWith :: Attr -> String -> Inlines
 codeWith attrs = singleton . Code attrs
@@ -344,9 +349,13 @@ linebreak = singleton LineBreak
 math :: String -> Inlines
 math = singleton . Math InlineMath
 
+-- | Display math with attributes
+displayMathWith :: Attr -> String -> Inlines
+displayMathWith attrs = singleton . Math (DisplayMath attrs)
+
 -- | Display math
 displayMath :: String -> Inlines
-displayMath = singleton . Math DisplayMath
+displayMath = displayMathWith nullAttr
 
 rawInline :: String -> String -> Inlines
 rawInline format = singleton . RawInline (Format format)
