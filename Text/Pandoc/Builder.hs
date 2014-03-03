@@ -125,6 +125,7 @@ module Text.Pandoc.Builder ( module Text.Pandoc.Definition
                            , rawInline
                            , link
                            , image
+                           , figure
                            , note
                            , spanWith
                            , trimInlines
@@ -372,6 +373,12 @@ image :: String  -- ^ URL
       -> Inlines
 image url title x = singleton $ Image (toList x) (url, title)
 
+figure :: Attr
+       -> [[Subfigure]] -- ^ Many rows of many subfigure elements
+       -> Inlines
+       -> Blocks
+figure attr subfigs caption = singleton $ Figure attr subfigs (toList caption)
+
 note :: Blocks -> Inlines
 note = singleton . Note . toList
 
@@ -443,6 +450,20 @@ simpleTable :: [Blocks]   -- ^ Headers
             -> Blocks
 simpleTable headers = table mempty (mapConst defaults headers) headers
   where defaults = (AlignDefault, 0)
+
+statement :: Attr
+          -> StatementType
+          -> Inlines       -- ^ Title/Header
+          -> Blocks        -- ^ Text
+          -> Blocks
+statement attr stmtType title text =
+  singleton $ Statement attr stmtType (toList title) (toList text)
+
+proof :: Inlines  -- ^ Replacement title
+      -> Blocks   -- ^ Text
+      -> Blocks
+proof altTile text =
+  singleton $ Proof (toList altTile) (toList text)
 
 divWith :: Attr -> Blocks -> Blocks
 divWith attr = singleton . Div attr . toList

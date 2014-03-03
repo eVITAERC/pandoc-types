@@ -52,6 +52,8 @@ module Text.Pandoc.Definition ( Pandoc(..)
                               , QuoteType(..)
                               , Target
                               , MathType(..)
+                              , Subfigure
+                              , StatementType(..)
                               , Citation(..)
                               , CitationMode(..)
                               , NumberedReference(..)
@@ -208,6 +210,15 @@ data Block
                             -- relative column widths (0 = default),
                             -- column headers (each a list of blocks), and
                             -- rows (each a list of lists of blocks)
+    | Figure Attr [[Subfigure]] [Inline] -- ^ Figures, with attributes,
+                            -- one or more image element (subfigures with their
+                            -- alt text as subcaptions) in one or more rows of
+                            -- image element, and caption (inlines)
+    | Statement Attr StatementType [Inline] [Block] -- ^ Standalone statements,
+                            -- can be sequentially numbered and cross-referenced
+    | Proof [Inline] [Block] -- ^ Proofs (AMS-style), with an optional
+                            -- alternate title, and proof text
+    | Abstract [Block]      -- ^ The abstract/summary of a document
     | Div Attr [Block]      -- ^ Generic block container with attributes
     | Null                  -- ^ Nothing
     deriving (Eq, Ord, Read, Show, Typeable, Data, Generic)
@@ -218,8 +229,15 @@ data QuoteType = SingleQuote | DoubleQuote deriving (Show, Eq, Ord, Read, Typeab
 -- | Link target (URL, title).
 type Target = (String, String)
 
+-- | Subfigure descriptor: tag attributes, subcaption (list of inlines), target
+type Subfigure = (Attr, [Inline], Target)
+
 -- | Type of math element (display or inline).
 data MathType = DisplayMath Attr | InlineMath deriving (Show, Eq, Ord, Read, Typeable, Data, Generic)
+
+-- | Type of statement, rought equivalent to @amsthm@ plain, defninition, and remark
+data StatementType = Theorem | Standard | Remark | Other String
+                     deriving (Show, Eq, Ord, Read, Typeable, Data, Generic)
 
 -- | Inline elements.
 data Inline
@@ -239,7 +257,7 @@ data Inline
     | Math MathType String  -- ^ TeX math (literal)
     | RawInline Format String -- ^ Raw inline
     | Link [Inline] Target  -- ^ Hyperlink: text (list of inlines), target
-    | Image [Inline] Target -- ^ Image:  alt text (list of inlines), target
+    | Image [Inline] Target -- ^ Image  alt text (list of inlines), target
     | Note [Block]          -- ^ Footnote or endnote
     | Span Attr [Inline]    -- ^ Generic inline container with attributes
     deriving (Show, Eq, Ord, Read, Typeable, Data, Generic)
@@ -316,6 +334,11 @@ instance ToJSON NumberedReferenceStyle
 instance FromJSON NumberedReference
   where parseJSON = parseJSON'
 instance ToJSON NumberedReference
+  where toJSON = toJSON'
+
+instance FromJSON StatementType
+  where parseJSON = parseJSON'
+instance ToJSON StatementType
   where toJSON = toJSON'
 
 instance FromJSON QuoteType
