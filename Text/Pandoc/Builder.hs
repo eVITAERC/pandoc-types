@@ -371,10 +371,11 @@ image :: String  -- ^ URL
       -> String  -- ^ Title
       -> Inlines -- ^ Alt text
       -> Inlines
-image url title x = singleton $ Image (toList x) (url, title)
+image url title x = singleton $ Image nullAttr (toList x) (url, title)
 
 -- | Image element with additional attributes
-imageWith :: String  -- ^ URL
+imageWith :: Attr
+          -> String  -- ^ URL
           -> String  -- ^ Title
           -> Inlines -- ^ Alt text
           -> Inlines

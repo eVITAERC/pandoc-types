@@ -52,7 +52,6 @@ module Text.Pandoc.Definition ( Pandoc(..)
                               , QuoteType(..)
                               , Target
                               , MathType(..)
-                              , Subfigure
                               , StatementType(..)
                               , Citation(..)
                               , CitationMode(..)
