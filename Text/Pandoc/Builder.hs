@@ -373,11 +373,19 @@ image :: String  -- ^ URL
       -> Inlines
 image url title x = singleton $ Image (toList x) (url, title)
 
+-- | Image element with additional attributes
+imageWith :: String  -- ^ URL
+          -> String  -- ^ Title
+          -> Inlines -- ^ Alt text
+          -> Inlines
+image url title x = singleton $ Image (toList x) (url, title)
+
 figure :: Attr
-       -> [[Subfigure]] -- ^ Many rows of many subfigure elements
+       -> [Inlines] -- ^ Many rows of many images
        -> Inlines
        -> Blocks
-figure attr subfigs caption = singleton $ Figure attr subfigs (toList caption)
+figure attr subfigs caption =
+  singleton $ Figure attr (map toList subfigs) (toList caption)
 
 note :: Blocks -> Inlines
 note = singleton . Note . toList

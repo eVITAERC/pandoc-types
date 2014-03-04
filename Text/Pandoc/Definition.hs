@@ -210,7 +210,7 @@ data Block
                             -- relative column widths (0 = default),
                             -- column headers (each a list of blocks), and
                             -- rows (each a list of lists of blocks)
-    | Figure Attr [[Subfigure]] [Inline] -- ^ Figures, with attributes,
+    | Figure Attr [[Inline]] [Inline] -- ^ Figures, with attributes,
                             -- one or more subfigure rows (each a list of
                             -- "subfigures", which are image description tuples
                             -- with their alt text as subcaptions), and a
@@ -229,9 +229,6 @@ data QuoteType = SingleQuote | DoubleQuote deriving (Show, Eq, Ord, Read, Typeab
 
 -- | Link target (URL, title).
 type Target = (String, String)
-
--- | Subfigure descriptor: tag attributes, subcaption (list of inlines), target
-type Subfigure = (Attr, [Inline], Target)
 
 -- | Type of math element (display or inline).
 data MathType = DisplayMath Attr | InlineMath deriving (Show, Eq, Ord, Read, Typeable, Data, Generic)
@@ -258,7 +255,7 @@ data Inline
     | Math MathType String  -- ^ TeX math (literal)
     | RawInline Format String -- ^ Raw inline
     | Link [Inline] Target  -- ^ Hyperlink: text (list of inlines), target
-    | Image [Inline] Target -- ^ Image  alt text (list of inlines), target
+    | Image Attr [Inline] Target -- ^ Image  alt text (list of inlines), target
     | Note [Block]          -- ^ Footnote or endnote
     | Span Attr [Inline]    -- ^ Generic inline container with attributes
     deriving (Show, Eq, Ord, Read, Typeable, Data, Generic)

@@ -404,14 +404,3 @@ instance Walkable a b => Walkable a [b] where
   walk f xs  = map (walk f) xs
   walkM f xs = mapM (walkM f) xs
   query f xs = mconcat $ map (query f) xs
-
-instance Walkable Subfigure Subfigure where
-  walk f (attr, sc, target) = f (attr, walk f sc, target)
-  walkM f (attr, sc, target) = do sc' <- walkM f sc
-                                  f $ (attr, sc, target)
-  query f (attr, sc, target) = f (attr, sc, target) <> query f sc
-
-instance Walkable _ Subfigure where
-  walk f (attr, sc, target) = (attr, walk f sc, target)
-  walkM f (attr, sc, target) = (attr, walkM f sc, target)
-  query f (attr, sc, target) = query f sc
