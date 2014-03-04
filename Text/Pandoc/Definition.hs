@@ -211,9 +211,10 @@ data Block
                             -- column headers (each a list of blocks), and
                             -- rows (each a list of lists of blocks)
     | Figure Attr [[Subfigure]] [Inline] -- ^ Figures, with attributes,
-                            -- one or more image element (subfigures with their
-                            -- alt text as subcaptions) in one or more rows of
-                            -- image element, and caption (inlines)
+                            -- one or more subfigure rows (each a list of
+                            -- "subfigures", which are image description tuples
+                            -- with their alt text as subcaptions), and a
+                            -- caption (inlines) for the whole figure.
     | Statement Attr StatementType [Inline] [Block] -- ^ Standalone statements,
                             -- can be sequentially numbered and cross-referenced
     | Proof [Inline] [Block] -- ^ Proofs (AMS-style), with an optional

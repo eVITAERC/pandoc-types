@@ -465,6 +465,10 @@ proof :: Inlines  -- ^ Replacement title
 proof altTile text =
   singleton $ Proof (toList altTile) (toList text)
 
+abstract :: Blocks
+         -> Blocks
+abstract = singleton . Abstract . toList
+
 divWith :: Attr -> Blocks -> Blocks
 divWith attr = singleton . Div attr . toList
 

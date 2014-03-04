@@ -169,6 +169,7 @@ instance Walkable Inline Block where
   walk f (Header lev attr xs)     = Header lev attr $ walk f xs
   walk f HorizontalRule           = HorizontalRule
   walk f (Table capt as ws hs rs) = Table (walk f capt) as ws (walk f hs) (walk f rs)
+  walk f (Figure attr sf capt)    = Figure attr (walk f sf) (walk f capt)
   walk f (Div attr bs)            = Div attr (walk f bs)
   walk f Null                     = Null
 
@@ -187,6 +188,10 @@ instance Walkable Inline Block where
                                      hs' <- walkM f hs
                                      rs' <- walkM f rs
                                      return $ Table capt' as ws hs' rs'
+  walkM f (Figure attr sf capt)    = do
+                                     sf' <- walkM f sf
+                                     capt' <- walkM f capt
+                                     return $ Figure attr sf' capt'
   walkM f (Div attr bs)            = Div attr <$> (walkM f bs)
   walkM f Null                     = return Null
 
@@ -201,10 +206,11 @@ instance Walkable Inline Block where
   query f (Header lev attr xs)     = query f xs
   query f HorizontalRule           = mempty
   query f (Table capt as ws hs rs) = query f capt <> query f hs <> query f rs
+  query f (Figure attr sf capt)    = query f sf <> query f capt
   query f (Div attr bs)            = query f bs
   query f Null                     = mempty
 
-instance Walkable Block Block where
+instance Walkable Block Block where 
   walk f (Para xs)                = f $ Para $ walk f xs
   walk f (Plain xs)               = f $ Plain $ walk f xs
   walk f (CodeBlock attr s)       = f $ CodeBlock attr s
@@ -217,6 +223,7 @@ instance Walkable Block Block where
   walk f HorizontalRule           = f $ HorizontalRule
   walk f (Table capt as ws hs rs) = f $ Table (walk f capt) as ws (walk f hs)
                                                      (walk f rs)
+  walk f (Figure attr sf capt)    = f $ Figure attr (walk f sf) (walk f capt)
   walk f (Div attr bs)            = f $ Div attr (walk f bs)
   walk f Null                     = Null
 
@@ -234,6 +241,9 @@ instance Walkable Block Block where
                                         hs' <- walkM f hs
                                         rs' <- walkM f rs
                                         f $ Table capt' as ws hs' rs'
+  walkM f (Figure attr sf capt)    = do sf' <- walkM f sf
+                                        capt' <- walkM f capt
+                                        f $ Figure attr sf' capt'
   walkM f (Div attr bs)            = Div attr <$> walkM f bs >>= f
   walkM f Null                     = f Null
 
@@ -249,6 +259,8 @@ instance Walkable Block Block where
   query f HorizontalRule           = f $ HorizontalRule
   query f (Table capt as ws hs rs) = f (Table capt as ws hs rs) <>
                                        query f capt <> query f hs <> query f rs
+  query f (Figure attr sf capt)    = f (Figure attr sf capt) <>
+                                       query f sf <> query f capt
   query f (Div attr bs)            = f (Div attr bs) <> query f bs
   query f Null                     = f Null
 
@@ -392,3 +404,14 @@ instance Walkable a b => Walkable a [b] where
   walk f xs  = map (walk f) xs
   walkM f xs = mapM (walkM f) xs
   query f xs = mconcat $ map (query f) xs
+
+instance Walkable Subfigure Subfigure where
+  walk f (attr, sc, target) = f (attr, walk f sc, target)
+  walkM f (attr, sc, target) = do sc' <- walkM f sc
+                                  f $ (attr, sc, target)
+  query f (attr, sc, target) = f (attr, sc, target) <> query f sc
+
+instance Walkable _ Subfigure where
+  walk f (attr, sc, target) = (attr, walk f sc, target)
+  walkM f (attr, sc, target) = (attr, walkM f sc, target)
+  query f (attr, sc, target) = query f sc
