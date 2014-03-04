@@ -378,7 +378,7 @@ imageWith :: String  -- ^ URL
           -> String  -- ^ Title
           -> Inlines -- ^ Alt text
           -> Inlines
-image url title x = singleton $ Image (toList x) (url, title)
+imageWith attr url title x = singleton $ Image attr (toList x) (url, title)
 
 figure :: Attr
        -> [Inlines] -- ^ Many rows of many images
