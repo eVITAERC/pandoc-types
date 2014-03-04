@@ -125,6 +125,7 @@ module Text.Pandoc.Builder ( module Text.Pandoc.Definition
                            , rawInline
                            , link
                            , image
+                           , imageWith
                            , figure
                            , note
                            , spanWith
