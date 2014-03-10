@@ -461,23 +461,58 @@ simpleTable :: [Blocks]   -- ^ Headers
 simpleTable headers = table mempty (mapConst defaults headers) headers
   where defaults = (AlignDefault, 0)
 
-statement :: Attr
-          -> StatementType
-          -> Inlines       -- ^ Title/Header
-          -> Blocks        -- ^ Text
+-- | Table float
+tableFloat :: Attr
+           -> Block  -- Table block
+           -> FloatFallback
+           -> Inlines -- Caption
+           -> Blocks
+tableFloat attr table fb capt = singleton $ TableFloat attr table fb (toList capt)
+
+-- | Code float
+codeFloat :: Attr
+          -> Block  -- Code block
+          -> FloatFallback
+          -> Inlines -- Caption
           -> Blocks
-statement attr stmtType title text =
-  singleton $ Statement attr stmtType (toList title) (toList text)
+codeFloat attr code fb capt = singleton $ CodeFloat attr code fb (toList capt)
+
+-- | Algorithm floats
+algorithmFloat :: Attr
+               -> Block  -- either a CodeBlock or a LineBlock (a Para)
+               -> FloatFallback
+               -> Inlines -- Caption
+               -> Blocks
+algorithmFloat attr alg fb capt = singleton $ Algorithm attr alg fb (toList capt)
+
+-- | Float fallbacks (an image and/or LaTeX source)
+floatFallback :: Inlines -- Image fallback
+              -> String -- LaTeX fallback
+              -> FloatFallback
+floatFallback imageFb latexFb =
+  let imageFb' = head $ toList imageFb
+  in FloatFallback imageFb' latexFb
+
+-- | Statements (theorem, lemma, definiton, example, etc)
+statement :: String
+          -> StatementStyle -- ^ Style (Theorem, Standard, Remark, Other)
+          -> (Inlines, String) -- ^ Label (with raw string)
+          -> String   -- ^ Counter name
+          -> Int      -- ^ Hierarchial level (1-6)
+          -> String   -- ^ Default numerical label
+          -> Inlines  -- ^ Caption
+          -> Blocks   -- ^ Text
+          -> Blocks
+statement ident style (lab, rawlab) cntr hlevel numlab capt text =
+  singleton $ Statement
+        (StatementAttr ident style (toList lab, rawlab) cntr hlevel numlab (toList capt))
+        (toList text)
 
 proof :: Inlines  -- ^ Replacement title
       -> Blocks   -- ^ Text
       -> Blocks
 proof altTile text =
   singleton $ Proof (toList altTile) (toList text)
-
-abstract :: Blocks
-         -> Blocks
-abstract = singleton . Abstract . toList
 
 divWith :: Attr -> Blocks -> Blocks
 divWith attr = singleton . Div attr . toList

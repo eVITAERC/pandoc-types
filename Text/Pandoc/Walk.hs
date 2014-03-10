@@ -109,6 +109,7 @@ instance Walkable Inline Inline where
   walk f (SmallCaps xs)   = f $ SmallCaps (walk f xs)
   walk f (Quoted qt xs)   = f $ Quoted qt (walk f xs)
   walk f (Cite cs xs)     = f $ Cite cs (walk f xs)
+  walk f (NumRef r s)     = f $ NumRef r s
   walk f (Code attr s)    = f $ Code attr s
   walk f Space            = f Space
   walk f LineBreak        = f LineBreak
@@ -128,6 +129,7 @@ instance Walkable Inline Inline where
   walkM f (SmallCaps xs)  = SmallCaps <$> walkM f xs >>= f
   walkM f (Quoted qt xs)  = Quoted qt <$> walkM f xs >>= f
   walkM f (Cite cs xs)    = Cite cs <$> walkM f xs >>= f
+  walkM f (NumRef r s)    = f $ NumRef r s
   walkM f (Code attr s)   = f $ Code attr s
   walkM f Space           = f Space
   walkM f LineBreak       = f LineBreak
@@ -147,6 +149,7 @@ instance Walkable Inline Inline where
   query f (SmallCaps xs)  = f (SmallCaps xs) <> query f xs
   query f (Quoted qt xs)  = f (Quoted qt xs) <> query f xs
   query f (Cite cs xs)    = f (Cite cs xs) <> query f xs
+  query f (NumRef r s)    = f (NumRef r s)
   query f (Code attr s)   = f (Code attr s)
   query f Space           = f Space
   query f LineBreak       = f LineBreak
@@ -170,6 +173,15 @@ instance Walkable Inline Block where
   walk f HorizontalRule           = HorizontalRule
   walk f (Table capt as ws hs rs) = Table (walk f capt) as ws (walk f hs) (walk f rs)
   walk f (Figure attr sf capt)    = Figure attr (walk f sf) (walk f capt)
+  walk f (TableFloat at tab (FloatFallback im lt) cs) =
+    TableFloat at (walk f tab) (FloatFallback (walk f im) lt) (walk f cs)
+  walk f (CodeFloat at cod (FloatFallback im lt) cs) =
+    CodeFloat at cod (FloatFallback (walk f im) lt) (walk f cs)
+  walk f (Algorithm at bl (FloatFallback im lt) cs)  =
+    Algorithm at (walk f bl) (FloatFallback (walk f im) lt) (walk f cs)
+  walk f (Statement (StatementAttr i sty (lb, lbr) ct lv n cp) bs) =
+    Statement (StatementAttr i sty (walk f lb, lbr) ct lv n (walk f cp)) (walk f bs)
+  walk f (Proof cpt cs)           = Proof (walk f cpt) (walk f cs)
   walk f (Div attr bs)            = Div attr (walk f bs)
   walk f Null                     = Null
 
@@ -192,6 +204,29 @@ instance Walkable Inline Block where
                                      sf' <- walkM f sf
                                      capt' <- walkM f capt
                                      return $ Figure attr sf' capt'
+  walkM f (TableFloat at tab (FloatFallback im lt) cs) = do
+            tab' <- walkM f tab
+            im' <- walkM f im
+            cs' <- walkM f cs
+            return $ TableFloat at tab' (FloatFallback im' lt) cs'
+  walkM f (CodeFloat at cod (FloatFallback im lt) cs) = do
+            im' <- walkM f im
+            cs' <- walkM f cs
+            return $ CodeFloat at cod (FloatFallback im' lt) cs'
+  walkM f (Algorithm at bl (FloatFallback im lt) cs) = do
+            bl' <- walkM f bl
+            im' <- walkM f im
+            cs' <- walkM f cs
+            return $ Algorithm at bl' (FloatFallback im' lt) cs'
+  walkM f (Statement (StatementAttr i sty (lb, lbr) ct lv n cp) bs) = do
+            lb' <- walkM f lb
+            cp' <- walkM f cp
+            bs' <- walkM f bs
+            return $ Statement (StatementAttr i sty (lb', lbr) ct lv n cp') bs'
+  walkM f (Proof cpt cs)           = do
+                                     cpt' <- walkM f cpt
+                                     cs' <- walkM f cs
+                                     return $ Proof cpt' cs'
   walkM f (Div attr bs)            = Div attr <$> (walkM f bs)
   walkM f Null                     = return Null
 
@@ -207,6 +242,15 @@ instance Walkable Inline Block where
   query f HorizontalRule           = mempty
   query f (Table capt as ws hs rs) = query f capt <> query f hs <> query f rs
   query f (Figure attr sf capt)    = query f sf <> query f capt
+  query f (TableFloat at tab (FloatFallback im lt) cs) =
+                                     query f tab <> query f im <> query f cs
+  query f (CodeFloat at cod (FloatFallback im lt) cs) =
+                                     query f im <> query f cs
+  query f (Algorithm at bl (FloatFallback im lt) cs) =
+                                     query f bl <> query f im <> query f cs
+  query f (Statement (StatementAttr i sty (lb, lbr) ct lv n cp) bs) =
+                                     query f lb <> query f cp <> query f bs
+  query f (Proof cpt cs)           = query f cpt <> query f cs
   query f (Div attr bs)            = query f bs
   query f Null                     = mempty
 
@@ -224,6 +268,11 @@ instance Walkable Block Block where
   walk f (Table capt as ws hs rs) = f $ Table (walk f capt) as ws (walk f hs)
                                                      (walk f rs)
   walk f (Figure attr sf capt)    = f $ Figure attr (walk f sf) (walk f capt)
+  walk f (TableFloat at tab fb cs) = f $ TableFloat at (walk f tab) fb (walk f cs)
+  walk f (CodeFloat at cod fb cs)  = f $ CodeFloat at (walk f cod) fb (walk f cs)
+  walk f (Algorithm at bl fb cs)  = f $ Algorithm at (walk f bl) fb (walk f cs)
+  walk f (Statement at bs)        = f $ Statement at (walk f bs)
+  walk f (Proof cpt cs)           = f $ Proof (walk f cpt) (walk f cs)
   walk f (Div attr bs)            = f $ Div attr (walk f bs)
   walk f Null                     = Null
 
@@ -244,6 +293,19 @@ instance Walkable Block Block where
   walkM f (Figure attr sf capt)    = do sf' <- walkM f sf
                                         capt' <- walkM f capt
                                         f $ Figure attr sf' capt'
+  walkM f (TableFloat at tab fb cs) = do tab' <- walkM f tab
+                                         cs' <- walkM f cs
+                                         f $ TableFloat at tab' fb cs'
+  walkM f (CodeFloat at cod fb cs)  = do cod' <- walkM f cod
+                                         cs' <- walkM f cs
+                                         f $ CodeFloat at cod' fb cs'
+  walkM f (Algorithm at bl fb cs)  = do bl' <- walkM f bl
+                                        cs' <- walkM f cs
+                                        f $ Algorithm at bl' fb cs'
+  walkM f (Statement at bs)        = Statement at <$> walkM f bs >>= f
+  walkM f (Proof cpt cs)           = do cpt' <- walkM f cpt
+                                        cs' <- walkM f cs
+                                        f $ Proof cpt' cs'
   walkM f (Div attr bs)            = Div attr <$> walkM f bs >>= f
   walkM f Null                     = f Null
 
@@ -261,6 +323,14 @@ instance Walkable Block Block where
                                        query f capt <> query f hs <> query f rs
   query f (Figure attr sf capt)    = f (Figure attr sf capt) <>
                                        query f sf <> query f capt
+  query f (TableFloat at tab fb cs) = f (TableFloat at tab fb cs) <>
+                                        query f tab <> query f cs
+  query f (CodeFloat at cod fb cs)  = f (CodeFloat at cod fb cs) <>
+                                        query f cod <> query f cs
+  query f (Algorithm at bl fb cs)  = f (Algorithm at bl fb cs) <>
+                                       query f bl <> query f cs
+  query f (Statement at bs)        = f (Statement at bs) <> query f bs
+  query f (Proof cpt cs)           = f (Proof cpt cs) <> query f cpt <> query f cs
   query f (Div attr bs)            = f (Div attr bs) <> query f bs
   query f Null                     = f Null
 
@@ -274,6 +344,7 @@ instance Walkable Block Inline where
   walk f (SmallCaps xs)  = SmallCaps (walk f xs)
   walk f (Quoted qt xs)  = Quoted qt (walk f xs)
   walk f (Cite cs xs)    = Cite cs (walk f xs)
+  walk f (NumRef r s)    = NumRef r s
   walk f (Code attr s)   = Code attr s
   walk f Space           = Space
   walk f LineBreak       = LineBreak
@@ -293,6 +364,7 @@ instance Walkable Block Inline where
   walkM f (SmallCaps xs)  = SmallCaps <$> walkM f xs
   walkM f (Quoted qt xs)  = Quoted qt <$> walkM f xs
   walkM f (Cite cs xs)    = Cite cs <$> walkM f xs
+  walkM f (NumRef r s)    = return $ NumRef r s
   walkM f (Code attr s)   = return $ Code attr s
   walkM f Space           = return $ Space
   walkM f LineBreak       = return $ LineBreak
@@ -312,6 +384,7 @@ instance Walkable Block Inline where
   query f (SmallCaps xs)  = query f xs
   query f (Quoted qt xs)  = query f xs
   query f (Cite cs xs)    = query f xs
+  query f (NumRef r s)    = mempty
   query f (Code attr s)   = mempty
   query f Space           = mempty
   query f LineBreak       = mempty

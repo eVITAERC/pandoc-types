@@ -52,7 +52,9 @@ module Text.Pandoc.Definition ( Pandoc(..)
                               , QuoteType(..)
                               , Target
                               , MathType(..)
-                              , StatementType(..)
+                              , FloatFallback(..)
+                              , StatementAttr(..)
+                              , StatementStyle(..)
                               , Citation(..)
                               , CitationMode(..)
                               , NumberedReference(..)
@@ -214,11 +216,20 @@ data Block
                             -- "subfigures", which are image description tuples
                             -- with their alt text as subcaptions), and a
                             -- caption (inlines) for the whole figure.
-    | Statement Attr StatementType [Inline] [Block] -- ^ Standalone statements,
-                            -- can be sequentially numbered and cross-referenced
+    | TableFloat Attr Block FloatFallback [Inline] -- ^ A table in a float
+                            -- environment, with attributes, a table,
+                            -- fallback, and caption
+    | CodeFloat Attr Block FloatFallback [Inline] -- ^ A CodeBlock in a float
+                            -- environment, with attributes, a CodeBlock,
+                            -- fallback, and caption
+    | Algorithm Attr Block FloatFallback [Inline] -- ^ Algorithms, with
+                            -- attributes, either a CodeBlock or a LineBlock
+                            -- (represented by a Para), fallback, and caption
+    | Statement StatementAttr [Block] -- ^ Standalone statements, can be
+                            -- sequentially numbered and cross-referenced, and
+                            -- optinally may have a Proof block inside its body.
     | Proof [Inline] [Block] -- ^ Proofs (AMS-style), with an optional
                             -- alternate title, and proof text
-    | Abstract [Block]      -- ^ The abstract/summary of a document
     | Div Attr [Block]      -- ^ Generic block container with attributes
     | Null                  -- ^ Nothing
     deriving (Eq, Ord, Read, Show, Typeable, Data, Generic)
@@ -232,9 +243,29 @@ type Target = (String, String)
 -- | Type of math element (display or inline).
 data MathType = DisplayMath Attr | InlineMath deriving (Show, Eq, Ord, Read, Typeable, Data, Generic)
 
+-- | Float fallback (an image and/or latex code)
+data FloatFallback = FloatFallback { floatImageFallback :: Inline -- Image
+                                   , floatLaTeXFallback :: String
+                                   }
+     deriving (Show, Eq, Ord, Read, Typeable, Data, Generic)
+
+-- | Statement Attributes: identifier, label (inlines with raw), name of counter, hiearchy level, pre-computed numerical label, caption,
+data StatementAttr  = StatementAttr { statementId      :: String
+                                    , statementStyle   :: StatementStyle
+                                    , statementLabel   :: ([Inline], String)
+                                    , statementCounter :: String
+                                    , statementLevel   :: Int
+                                    , statementNum     :: String
+                                    , statementCaption :: [Inline]
+                                    }
+     deriving (Show, Eq, Read, Typeable, Data, Generic)
+
+instance Ord StatementAttr where
+    compare = comparing statementId
+
 -- | Type of statement, rought equivalent to @amsthm@ plain, defninition, and remark
-data StatementType = Theorem | Standard | Remark | Other String
-                     deriving (Show, Eq, Ord, Read, Typeable, Data, Generic)
+data StatementStyle = Theorem | Standard | Remark | Other String
+                      deriving (Show, Eq, Ord, Read, Typeable, Data, Generic)
 
 -- | Inline elements.
 data Inline
@@ -274,15 +305,16 @@ instance Ord Citation where
 data CitationMode = AuthorInText | SuppressAuthor | NormalCitation
                     deriving (Show, Eq, Ord, Read, Typeable, Data, Generic)
 
-data NumberedReference = NumberedReference { numRefLabel :: String
+data NumberedReference = NumberedReference { numRefId    :: String
                                            , numRefStyle :: NumberedReferenceStyle
+                                           , numRefLabel :: [Inline]
                                            }
                          deriving (Show, Eq, Read, Typeable, Data, Generic)
 
 instance Ord NumberedReference where
-    compare = comparing numRefLabel
+    compare = comparing numRefId
 
-data NumberedReferenceStyle = MinimalNumRef | ParenthesesNumRef
+data NumberedReferenceStyle = PlainNumRef | ParenthesesNumRef
                               deriving (Show, Eq, Ord, Read, Typeable, Data, Generic)
 
 -- derive generic instances of FromJSON, ToJSON:
@@ -333,9 +365,19 @@ instance FromJSON NumberedReference
 instance ToJSON NumberedReference
   where toJSON = toJSON'
 
-instance FromJSON StatementType
+instance FromJSON FloatFallback
   where parseJSON = parseJSON'
-instance ToJSON StatementType
+instance ToJSON FloatFallback
+  where toJSON = toJSON'
+
+instance FromJSON StatementAttr
+  where parseJSON = parseJSON'
+instance ToJSON StatementAttr
+  where toJSON = toJSON'
+
+instance FromJSON StatementStyle
+  where parseJSON = parseJSON'
+instance ToJSON StatementStyle
   where toJSON = toJSON'
 
 instance FromJSON QuoteType
