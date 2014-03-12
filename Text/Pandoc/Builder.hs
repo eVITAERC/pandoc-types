@@ -126,7 +126,6 @@ module Text.Pandoc.Builder ( module Text.Pandoc.Definition
                            , link
                            , image
                            , imageWith
-                           , figure
                            , note
                            , spanWith
                            , trimInlines
@@ -144,8 +143,15 @@ module Text.Pandoc.Builder ( module Text.Pandoc.Definition
                            , header
                            , headerWith
                            , horizontalRule
+                           , figure
                            , table
                            , simpleTable
+                           , tableFloat
+                           , algorithmFloat
+                           , codeFloat
+                           , floatFallback
+                           , statement
+                           , proof
                            , divWith
                            )
 where
@@ -463,27 +469,27 @@ simpleTable headers = table mempty (mapConst defaults headers) headers
 
 -- | Table float
 tableFloat :: Attr
-           -> Block  -- Table block
+           -> Blocks  -- Table block
            -> FloatFallback
            -> Inlines -- Caption
            -> Blocks
-tableFloat attr table fb capt = singleton $ TableFloat attr table fb (toList capt)
+tableFloat attr table fb capt = singleton $ TableFloat attr (toList table) fb (toList capt)
 
 -- | Code float
 codeFloat :: Attr
-          -> Block  -- Code block
+          -> Blocks  -- Code block
           -> FloatFallback
           -> Inlines -- Caption
           -> Blocks
-codeFloat attr code fb capt = singleton $ CodeFloat attr code fb (toList capt)
+codeFloat attr code fb capt = singleton $ CodeFloat attr (toList code) fb (toList capt)
 
 -- | Algorithm floats
 algorithmFloat :: Attr
-               -> Block  -- either a CodeBlock or a LineBlock (a Para)
+               -> Blocks  -- either a CodeBlock or a LineBlock (a Para)
                -> FloatFallback
                -> Inlines -- Caption
                -> Blocks
-algorithmFloat attr alg fb capt = singleton $ Algorithm attr alg fb (toList capt)
+algorithmFloat attr alg fb capt = singleton $ Algorithm attr (toList alg) fb (toList capt)
 
 -- | Float fallbacks (an image and/or LaTeX source)
 floatFallback :: Inlines -- Image fallback

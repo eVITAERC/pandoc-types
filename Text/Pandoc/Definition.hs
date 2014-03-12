@@ -216,13 +216,13 @@ data Block
                             -- "subfigures", which are image description tuples
                             -- with their alt text as subcaptions), and a
                             -- caption (inlines) for the whole figure.
-    | TableFloat Attr Block FloatFallback [Inline] -- ^ A table in a float
+    | TableFloat Attr [Block] FloatFallback [Inline] -- ^ A table in a float
                             -- environment, with attributes, a table,
                             -- fallback, and caption
-    | CodeFloat Attr Block FloatFallback [Inline] -- ^ A CodeBlock in a float
+    | CodeFloat Attr [Block] FloatFallback [Inline] -- ^ A CodeBlock in a float
                             -- environment, with attributes, a CodeBlock,
                             -- fallback, and caption
-    | Algorithm Attr Block FloatFallback [Inline] -- ^ Algorithms, with
+    | Algorithm Attr [Block] FloatFallback [Inline] -- ^ Algorithms, with
                             -- attributes, either a CodeBlock or a LineBlock
                             -- (represented by a Para), fallback, and caption
     | Statement StatementAttr [Block] -- ^ Standalone statements, can be
