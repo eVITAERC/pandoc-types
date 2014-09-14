@@ -172,13 +172,9 @@ instance Walkable Inline Block where
   walk f (Header lev attr xs)     = Header lev attr $ walk f xs
   walk f HorizontalRule           = HorizontalRule
   walk f (Table capt as ws hs rs) = Table (walk f capt) as ws (walk f hs) (walk f rs)
-  walk f (Figure attr sf capt)    = Figure attr (walk f sf) (walk f capt)
-  walk f (TableFloat at tab (FloatFallback im lt) cs) =
-    TableFloat at (walk f tab) (FloatFallback (walk f im) lt) (walk f cs)
-  walk f (CodeFloat at cod (FloatFallback im lt) cs) =
-    CodeFloat at cod (FloatFallback (walk f im) lt) (walk f cs)
-  walk f (Algorithm at bl (FloatFallback im lt) cs)  =
-    Algorithm at (walk f bl) (FloatFallback (walk f im) lt) (walk f cs)
+  walk f (Figure ft attr cs (PreparedContent im lt) capt) =
+    Figure ft attr (walk f cs) (PreparedContent (walk f im) lt) (walk f capt)
+  walk f (ImageGrid xs)           = ImageGrid $ walk f xs
   walk f (Statement (StatementAttr i sty (lb, lbr) ct lv n cp) bs) =
     Statement (StatementAttr i sty (walk f lb, lbr) ct lv n (walk f cp)) (walk f bs)
   walk f (Proof cpt cs)           = Proof (walk f cpt) (walk f cs)
@@ -200,29 +196,20 @@ instance Walkable Inline Block where
                                      hs' <- walkM f hs
                                      rs' <- walkM f rs
                                      return $ Table capt' as ws hs' rs'
-  walkM f (Figure attr sf capt)    = do
-                                     sf' <- walkM f sf
+  walkM f (Figure ft attr cs (PreparedContent im lt) capt) = do
+                                     cs' <- walkM f cs
+                                     im' <- walkM f im
                                      capt' <- walkM f capt
-                                     return $ Figure attr sf' capt'
-  walkM f (TableFloat at tab (FloatFallback im lt) cs) = do
-            tab' <- walkM f tab
-            im' <- walkM f im
-            cs' <- walkM f cs
-            return $ TableFloat at tab' (FloatFallback im' lt) cs'
-  walkM f (CodeFloat at cod (FloatFallback im lt) cs) = do
-            im' <- walkM f im
-            cs' <- walkM f cs
-            return $ CodeFloat at cod (FloatFallback im' lt) cs'
-  walkM f (Algorithm at bl (FloatFallback im lt) cs) = do
-            bl' <- walkM f bl
-            im' <- walkM f im
-            cs' <- walkM f cs
-            return $ Algorithm at bl' (FloatFallback im' lt) cs'
+                                     return $ Figure ft attr cs'
+                                                (PreparedContent im' lt) capt'
+  walkM f (ImageGrid xs)           = ImageGrid <$> walkM f xs
   walkM f (Statement (StatementAttr i sty (lb, lbr) ct lv n cp) bs) = do
-            lb' <- walkM f lb
-            cp' <- walkM f cp
-            bs' <- walkM f bs
-            return $ Statement (StatementAttr i sty (lb', lbr) ct lv n cp') bs'
+                                     lb' <- walkM f lb
+                                     cp' <- walkM f cp
+                                     bs' <- walkM f bs
+                                     return $ Statement
+                                                (StatementAttr i sty (lb', lbr)
+                                                  ct lv n cp') bs'
   walkM f (Proof cpt cs)           = do
                                      cpt' <- walkM f cpt
                                      cs' <- walkM f cs
@@ -241,13 +228,9 @@ instance Walkable Inline Block where
   query f (Header lev attr xs)     = query f xs
   query f HorizontalRule           = mempty
   query f (Table capt as ws hs rs) = query f capt <> query f hs <> query f rs
-  query f (Figure attr sf capt)    = query f sf <> query f capt
-  query f (TableFloat at tab (FloatFallback im lt) cs) =
-                                     query f tab <> query f im <> query f cs
-  query f (CodeFloat at cod (FloatFallback im lt) cs) =
-                                     query f im <> query f cs
-  query f (Algorithm at bl (FloatFallback im lt) cs) =
-                                     query f bl <> query f im <> query f cs
+  query f (Figure ft attr cs (PreparedContent im lt) capt) =
+                                     query f cs <> query f im <> query f capt
+  query f (ImageGrid xs)           = query f xs
   query f (Statement (StatementAttr i sty (lb, lbr) ct lv n cp) bs) =
                                      query f lb <> query f cp <> query f bs
   query f (Proof cpt cs)           = query f cpt <> query f cs
@@ -267,11 +250,15 @@ instance Walkable Block Block where
   walk f HorizontalRule           = f $ HorizontalRule
   walk f (Table capt as ws hs rs) = f $ Table (walk f capt) as ws (walk f hs)
                                                      (walk f rs)
-  walk f (Figure attr sf capt)    = f $ Figure attr (walk f sf) (walk f capt)
-  walk f (TableFloat at tab fb cs) = f $ TableFloat at (walk f tab) fb (walk f cs)
-  walk f (CodeFloat at cod fb cs)  = f $ CodeFloat at (walk f cod) fb (walk f cs)
-  walk f (Algorithm at bl fb cs)  = f $ Algorithm at (walk f bl) fb (walk f cs)
-  walk f (Statement at bs)        = f $ Statement at (walk f bs)
+  walk f (Figure ft attr cs (PreparedContent im lt) capt) =
+                                    f $ Figure ft attr (walk f cs)
+                                         (PreparedContent (walk f im) lt) (walk f capt)
+  walk f (ImageGrid xs)           = f $ ImageGrid $ walk f xs
+  walk f (Statement (StatementAttr i sty (lb, lbr) ct lv n cp) bs) =
+                                    f $ Statement
+                                          (StatementAttr i sty (walk f lb, lbr)
+                                            ct lv n (walk f cp))
+                                          (walk f bs)
   walk f (Proof cpt cs)           = f $ Proof (walk f cpt) (walk f cs)
   walk f (Div attr bs)            = f $ Div attr (walk f bs)
   walk f Null                     = Null
@@ -290,18 +277,13 @@ instance Walkable Block Block where
                                         hs' <- walkM f hs
                                         rs' <- walkM f rs
                                         f $ Table capt' as ws hs' rs'
-  walkM f (Figure attr sf capt)    = do sf' <- walkM f sf
-                                        capt' <- walkM f capt
-                                        f $ Figure attr sf' capt'
-  walkM f (TableFloat at tab fb cs) = do tab' <- walkM f tab
-                                         cs' <- walkM f cs
-                                         f $ TableFloat at tab' fb cs'
-  walkM f (CodeFloat at cod fb cs)  = do cod' <- walkM f cod
-                                         cs' <- walkM f cs
-                                         f $ CodeFloat at cod' fb cs'
-  walkM f (Algorithm at bl fb cs)  = do bl' <- walkM f bl
-                                        cs' <- walkM f cs
-                                        f $ Algorithm at bl' fb cs'
+  walkM f (Figure ft attr cs (PreparedContent im lt) capt) = do
+                                     cs' <- walkM f cs
+                                     im' <- walkM f im
+                                     capt' <- walkM f capt
+                                     f $ Figure ft attr cs'
+                                           (PreparedContent im' lt) capt'
+  walkM f (ImageGrid xs)           = ImageGrid <$> walkM f xs >>= f
   walkM f (Statement at bs)        = Statement at <$> walkM f bs >>= f
   walkM f (Proof cpt cs)           = do cpt' <- walkM f cpt
                                         cs' <- walkM f cs
@@ -321,14 +303,10 @@ instance Walkable Block Block where
   query f HorizontalRule           = f $ HorizontalRule
   query f (Table capt as ws hs rs) = f (Table capt as ws hs rs) <>
                                        query f capt <> query f hs <> query f rs
-  query f (Figure attr sf capt)    = f (Figure attr sf capt) <>
-                                       query f sf <> query f capt
-  query f (TableFloat at tab fb cs) = f (TableFloat at tab fb cs) <>
-                                        query f tab <> query f cs
-  query f (CodeFloat at cod fb cs)  = f (CodeFloat at cod fb cs) <>
-                                        query f cod <> query f cs
-  query f (Algorithm at bl fb cs)  = f (Algorithm at bl fb cs) <>
-                                       query f bl <> query f cs
+  query f (Figure ft attr cs pc@(PreparedContent im lt) capt) =
+                                     f (Figure ft attr cs pc capt) <>
+                                       query f cs <> query f im <> query f capt
+  query f (ImageGrid xs)           = f (ImageGrid xs) <> query f xs
   query f (Statement at bs)        = f (Statement at bs) <> query f bs
   query f (Proof cpt cs)           = f (Proof cpt cs) <> query f cpt <> query f cs
   query f (Div attr bs)            = f (Div attr bs) <> query f bs

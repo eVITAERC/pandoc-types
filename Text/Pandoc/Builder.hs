@@ -143,13 +143,9 @@ module Text.Pandoc.Builder ( module Text.Pandoc.Definition
                            , header
                            , headerWith
                            , horizontalRule
-                           , figure
                            , table
                            , simpleTable
-                           , tableFloat
-                           , algorithmFloat
-                           , codeFloat
-                           , floatFallback
+                           , figure
                            , statement
                            , proof
                            , divWith
@@ -388,13 +384,6 @@ imageWith :: Attr
           -> Inlines
 imageWith attr url title x = singleton $ Image attr (toList x) (url, title)
 
-figure :: Attr
-       -> [Inlines] -- ^ Many rows of many images
-       -> Inlines
-       -> Blocks
-figure attr subfigs caption =
-  singleton $ Figure attr (map toList subfigs) (toList caption)
-
 note :: Blocks -> Inlines
 note = singleton . Note . toList
 
@@ -467,37 +456,15 @@ simpleTable :: [Blocks]   -- ^ Headers
 simpleTable headers = table mempty (mapConst defaults headers) headers
   where defaults = (AlignDefault, 0)
 
--- | Table float
-tableFloat :: Attr
-           -> Blocks  -- Table block
-           -> FloatFallback
-           -> Inlines -- Caption
-           -> Blocks
-tableFloat attr table fb capt = singleton $ TableFloat attr (toList table) fb (toList capt)
-
--- | Code float
-codeFloat :: Attr
-          -> Blocks  -- Code block
-          -> FloatFallback
-          -> Inlines -- Caption
-          -> Blocks
-codeFloat attr code fb capt = singleton $ CodeFloat attr (toList code) fb (toList capt)
-
--- | Algorithm floats
-algorithmFloat :: Attr
-               -> Blocks  -- either a CodeBlock or a LineBlock (a Para)
-               -> FloatFallback
-               -> Inlines -- Caption
-               -> Blocks
-algorithmFloat attr alg fb capt = singleton $ Algorithm attr (toList alg) fb (toList capt)
-
--- | Float fallbacks (an image and/or LaTeX source)
-floatFallback :: Inlines -- Image fallback
-              -> String -- LaTeX fallback
-              -> FloatFallback
-floatFallback imageFb latexFb =
-  let imageFb' = head $ toList imageFb
-  in FloatFallback imageFb' latexFb
+-- | Generic figure builder for all figure types
+figure :: FigureType
+       -> Attr
+       -> Blocks        -- ^ Float content (intrepreted according to FigureType)
+       -> PreparedContent
+       -> Inlines       -- ^ Caption
+       -> Blocks
+figure figureType attr content prepared caption =
+  singleton $ Figure figureType attr (toList content) prepared (toList caption)
 
 -- | Statements (theorem, lemma, definiton, example, etc)
 statement :: String

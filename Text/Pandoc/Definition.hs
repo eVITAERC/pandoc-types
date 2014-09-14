@@ -52,7 +52,8 @@ module Text.Pandoc.Definition ( Pandoc(..)
                               , QuoteType(..)
                               , Target
                               , MathType(..)
-                              , FloatFallback(..)
+                              , FigureType(..)
+                              , PreparedContent(..)
                               , StatementAttr(..)
                               , StatementStyle(..)
                               , Citation(..)
@@ -211,20 +212,17 @@ data Block
                             -- relative column widths (0 = default),
                             -- column headers (each a list of blocks), and
                             -- rows (each a list of lists of blocks)
-    | Figure Attr [[Inline]] [Inline] -- ^ Figures, with attributes,
-                            -- one or more subfigure rows (each a list of
-                            -- "subfigures", which are image description tuples
-                            -- with their alt text as subcaptions), and a
-                            -- caption (inlines) for the whole figure.
-    | TableFloat Attr [Block] FloatFallback [Inline] -- ^ A table in a float
-                            -- environment, with attributes, a table,
-                            -- fallback, and caption
-    | CodeFloat Attr [Block] FloatFallback [Inline] -- ^ A CodeBlock in a float
-                            -- environment, with attributes, a CodeBlock,
-                            -- fallback, and caption
-    | Algorithm Attr [Block] FloatFallback [Inline] -- ^ Algorithms, with
-                            -- attributes, either a CodeBlock or a LineBlock
-                            -- (represented by a Para), fallback, and caption
+    | Figure FigureType Attr [Block] PreparedContent [Inline] -- ^ A floating figure,
+                            -- containing for example images, tables,
+                            -- highlighted code, pseudocode, etc. Differentiated
+                            -- by FigureType. Has attribures, list of float
+                            -- content (typically just 1), a FloatFallback for
+                            -- "pre-compiled" float content,and a caption (inlines)
+                            -- for the whole figure.
+    | ImageGrid [[Inline]]  -- ^ ImageGrid, containing rows of images, intended
+                            -- to be used primarily in Floats. In this context,
+                            -- alt texts will be treated as captions for each
+                            -- individual image.
     | Statement StatementAttr [Block] -- ^ Standalone statements, can be
                             -- sequentially numbered and cross-referenced, and
                             -- optinally may have a Proof block inside its body.
@@ -233,6 +231,13 @@ data Block
     | Div Attr [Block]      -- ^ Generic block container with attributes
     | Null                  -- ^ Nothing
     deriving (Eq, Ord, Read, Show, Typeable, Data, Generic)
+
+-- | Type of figure, mainly used to differentiate content (i.e., images vs tables).
+--   ImageFigure contains a ImageGrid. TableFigure contains one or more Tables.
+--   LineBlockFigure contains one or more Paras (intended for algorithms and poetry).
+--   ListingFigure contains one or more CodeBlocks.
+data FigureType = ImageFigure | TableFigure | LineBlockFigure | ListingFigure
+     deriving (Show, Eq, Ord, Read, Typeable, Data, Generic)
 
 -- | Type of quotation marks to use in Quoted inline.
 data QuoteType = SingleQuote | DoubleQuote deriving (Show, Eq, Ord, Read, Typeable, Data, Generic)
@@ -243,10 +248,11 @@ type Target = (String, String)
 -- | Type of math element (display or inline).
 data MathType = DisplayMath Attr | InlineMath deriving (Show, Eq, Ord, Read, Typeable, Data, Generic)
 
--- | Float fallback (an image and/or latex code)
-data FloatFallback = FloatFallback { floatImageFallback :: Inline -- Image
-                                   , floatLaTeXFallback :: String
-                                   }
+-- | Pre-rendered figure content intended to archive final, professionally typeset or drawn
+--   figures from content already described in markdown format (an image and/or latex code)
+data PreparedContent = PreparedContent { preparedImageContent :: Inline -- Image
+                                       , preparedLaTeXContent :: String
+                                        }
      deriving (Show, Eq, Ord, Read, Typeable, Data, Generic)
 
 -- | Statement Attributes: identifier, label (inlines with raw), name of counter, hiearchy level, pre-computed numerical label, caption,
@@ -365,9 +371,14 @@ instance FromJSON NumberedReference
 instance ToJSON NumberedReference
   where toJSON = toJSON'
 
-instance FromJSON FloatFallback
+instance FromJSON FigureType
   where parseJSON = parseJSON'
-instance ToJSON FloatFallback
+instance ToJSON FigureType
+  where toJSON = toJSON'
+
+instance FromJSON PreparedContent
+  where parseJSON = parseJSON'
+instance ToJSON PreparedContent
   where toJSON = toJSON'
 
 instance FromJSON StatementAttr
