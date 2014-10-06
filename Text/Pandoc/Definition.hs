@@ -54,6 +54,7 @@ module Text.Pandoc.Definition ( Pandoc(..)
                               , MathType(..)
                               , FigureType(..)
                               , PreparedContent(..)
+                              , noPrepContent
                               , StatementAttr(..)
                               , StatementStyle(..)
                               , Citation(..)
@@ -254,6 +255,9 @@ data PreparedContent = PreparedContent { preparedImageContent :: Inline -- Image
                                        , preparedLaTeXContent :: String
                                         }
      deriving (Show, Eq, Ord, Read, Typeable, Data, Generic)
+
+noPrepContent :: PreparedContent
+noPrepContent = PreparedContent Space ""
 
 -- | Statement Attributes: identifier, label (inlines with raw), name of counter, hiearchy level, pre-computed numerical label, caption,
 data StatementAttr  = StatementAttr { statementId      :: String

@@ -145,6 +145,7 @@ module Text.Pandoc.Builder ( module Text.Pandoc.Definition
                            , horizontalRule
                            , table
                            , simpleTable
+                           , imageGrid
                            , figure
                            , statement
                            , proof
@@ -456,14 +457,18 @@ simpleTable :: [Blocks]   -- ^ Headers
 simpleTable headers = table mempty (mapConst defaults headers) headers
   where defaults = (AlignDefault, 0)
 
+-- | A column of rows of images, forming a grid (used for figures)
+imageGrid :: [Inlines] -> Blocks
+imageGrid = singleton . ImageGrid . map toList
+
 -- | Generic figure builder for all figure types
 figure :: FigureType
        -> Attr
-       -> Blocks        -- ^ Float content (intrepreted according to FigureType)
        -> PreparedContent
+       -> Blocks        -- ^ Float content (intrepreted according to FigureType)
        -> Inlines       -- ^ Caption
        -> Blocks
-figure figureType attr content prepared caption =
+figure figureType attr prepared content caption =
   singleton $ Figure figureType attr (toList content) prepared (toList caption)
 
 -- | Statements (theorem, lemma, definiton, example, etc)
