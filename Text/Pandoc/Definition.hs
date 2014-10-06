@@ -73,6 +73,7 @@ import GHC.Generics (Generic, Rep (..))
 import Data.String
 import Data.Char (toLower)
 import Data.Monoid
+import Control.DeepSeq.Generics
 
 data Pandoc = Pandoc Meta [Block]
               deriving (Eq, Ord, Read, Show, Typeable, Data, Generic)
@@ -439,3 +440,24 @@ instance FromJSON Pandoc
   where parseJSON = parseJSON'
 instance ToJSON Pandoc
   where toJSON = toJSON'
+
+-- Instances for deepseq
+instance NFData MetaValue where rnf = genericRnf
+instance NFData Meta where rnf = genericRnf
+instance NFData Citation where rnf = genericRnf
+instance NFData Alignment where rnf = genericRnf
+instance NFData Inline where rnf = genericRnf
+instance NFData FigureType where rnf = genericRnf
+instance NFData MathType where rnf = genericRnf
+instance NFData PreparedContent where rnf = genericRnf
+instance NFData StatementAttr where rnf = genericRnf
+instance NFData StatementStyle where rnf = genericRnf
+instance NFData Format where rnf = genericRnf
+instance NFData CitationMode where rnf = genericRnf
+instance NFData NumberedReference where rnf = genericRnf
+instance NFData NumberedReferenceStyle where rnf = genericRnf
+instance NFData QuoteType where rnf = genericRnf
+instance NFData ListNumberDelim where rnf = genericRnf
+instance NFData ListNumberStyle where rnf = genericRnf
+instance NFData Block where rnf = genericRnf
+instance NFData Pandoc where rnf = genericRnf

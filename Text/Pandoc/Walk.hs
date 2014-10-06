@@ -108,7 +108,7 @@ instance Walkable Inline Inline where
   walk f (Superscript xs) = f $ Superscript (walk f xs)
   walk f (SmallCaps xs)   = f $ SmallCaps (walk f xs)
   walk f (Quoted qt xs)   = f $ Quoted qt (walk f xs)
-  walk f (Cite cs xs)     = f $ Cite cs (walk f xs)
+  walk f (Cite cs xs)     = f $ Cite (walk f cs) (walk f xs)
   walk f (NumRef r s)     = f $ NumRef r s
   walk f (Code attr s)    = f $ Code attr s
   walk f Space            = f Space
@@ -128,7 +128,9 @@ instance Walkable Inline Inline where
   walkM f (Superscript xs)= Superscript <$> walkM f xs >>= f
   walkM f (SmallCaps xs)  = SmallCaps <$> walkM f xs >>= f
   walkM f (Quoted qt xs)  = Quoted qt <$> walkM f xs >>= f
-  walkM f (Cite cs xs)    = Cite cs <$> walkM f xs >>= f
+  walkM f (Cite cs xs)    = do cs' <- walkM f cs
+                               xs' <- walkM f xs
+                               f $ Cite cs' xs'
   walkM f (NumRef r s)    = f $ NumRef r s
   walkM f (Code attr s)   = f $ Code attr s
   walkM f Space           = f Space
@@ -148,7 +150,7 @@ instance Walkable Inline Inline where
   query f (Superscript xs)= f (Superscript xs) <> query f xs
   query f (SmallCaps xs)  = f (SmallCaps xs) <> query f xs
   query f (Quoted qt xs)  = f (Quoted qt xs) <> query f xs
-  query f (Cite cs xs)    = f (Cite cs xs) <> query f xs
+  query f (Cite cs xs)    = f (Cite cs xs) <> query f cs <> query f xs
   query f (NumRef r s)    = f (NumRef r s)
   query f (Code attr s)   = f (Code attr s)
   query f Space           = f Space
@@ -321,7 +323,7 @@ instance Walkable Block Inline where
   walk f (Superscript xs)= Superscript (walk f xs)
   walk f (SmallCaps xs)  = SmallCaps (walk f xs)
   walk f (Quoted qt xs)  = Quoted qt (walk f xs)
-  walk f (Cite cs xs)    = Cite cs (walk f xs)
+  walk f (Cite cs xs)    = Cite (walk f cs) (walk f xs)
   walk f (NumRef r s)    = NumRef r s
   walk f (Code attr s)   = Code attr s
   walk f Space           = Space
@@ -341,7 +343,9 @@ instance Walkable Block Inline where
   walkM f (Superscript xs)= Superscript <$> walkM f xs
   walkM f (SmallCaps xs)  = SmallCaps <$> walkM f xs
   walkM f (Quoted qt xs)  = Quoted qt <$> walkM f xs
-  walkM f (Cite cs xs)    = Cite cs <$> walkM f xs
+  walkM f (Cite cs xs)    = do cs' <- walkM f cs
+                               xs' <- walkM f xs
+                               return $ Cite cs' xs'
   walkM f (NumRef r s)    = return $ NumRef r s
   walkM f (Code attr s)   = return $ Code attr s
   walkM f Space           = return $ Space
@@ -361,7 +365,7 @@ instance Walkable Block Inline where
   query f (Superscript xs)= query f xs
   query f (SmallCaps xs)  = query f xs
   query f (Quoted qt xs)  = query f xs
-  query f (Cite cs xs)    = query f xs
+  query f (Cite cs xs)    = query f cs <> query f xs
   query f (NumRef r s)    = mempty
   query f (Code attr s)   = mempty
   query f Space           = mempty
@@ -450,6 +454,26 @@ instance Walkable Block MetaValue where
   query f (MetaInlines xs) = query f xs
   query f (MetaBlocks bs)  = query f bs
   query f (MetaMap m)      = query f m
+
+instance Walkable Inline Citation where
+  walk f (Citation id' pref suff mode notenum hash) =
+    Citation id' (walk f pref) (walk f suff) mode notenum hash
+  walkM f (Citation id' pref suff mode notenum hash) =
+    do pref' <- walkM f pref
+       suff' <- walkM f suff
+       return $ Citation id' pref' suff' mode notenum hash
+  query f (Citation id' pref suff mode notenum hash) =
+    query f pref <> query f suff
+
+instance Walkable Block Citation where
+  walk f (Citation id' pref suff mode notenum hash) =
+    Citation id' (walk f pref) (walk f suff) mode notenum hash
+  walkM f (Citation id' pref suff mode notenum hash) =
+    do pref' <- walkM f pref
+       suff' <- walkM f suff
+       return $ Citation id' pref' suff' mode notenum hash
+  query f (Citation id' pref suff mode notenum hash) =
+    query f pref <> query f suff
 
 instance Walkable a b => Walkable a [b] where
   walk f xs  = map (walk f) xs
