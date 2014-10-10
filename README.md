@@ -10,7 +10,7 @@ Scholdoc-Types
 
 
 This project contains definitions of the document structure used for
-[Scholdoc][scholdoc], a fork of Pandoc that understands [Scholarly Markdown][scholmd]. This package is a fork of [Pandoc-Types][pandoc-types]
+[Scholdoc][scholdoc], a fork of Pandoc that understands [ScholarlyMarkdown][scholmd]. This package is a fork of [Pandoc-Types][pandoc-types]
 intended to support the development of [Scholdoc][scholdoc]. It includes some
 non-trivial extensions to the Pandoc data types and builder functions that are
 not easily implemented by depending on and extending the
