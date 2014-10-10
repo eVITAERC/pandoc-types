@@ -19,7 +19,7 @@ License:             GPL
 License-file:        COPYING
 Author:              Tim T.Y. Lin
 Maintainer:          timtylin@gmail.com
-Bug-Reports:         https://github.com/timtylin/scholdoc-types/issues
+Bug-Reports:         http://github.com/timtylin/scholdoc-types/issues
 Copyright:           (c) 2014 Tim T.Y. Lin, (c) 2006-2014 John MacFarlane
 Category:            Text
 Build-type:          Simple
