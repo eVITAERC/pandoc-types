@@ -1,6 +1,6 @@
 Name:                scholdoc-types
 Version:             0.1.3
-Synopsis:            Scholdoc fork of @pandoc-types@
+Synopsis:            Scholdoc fork of pandoc-types
 Description:         This package is a fork of @pandoc-types@ intended to
                      support the development of Scholdoc. It includes some
                      non-trivial extensions to the Pandoc types and builder
