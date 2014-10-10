@@ -1,5 +1,7 @@
-Scholdoc-Types: document structure for Scholdoc
-===============================================
+Scholdoc-Types
+==============
+
+**document structure for Scholdoc**
 
 **Current version:** 0.1.3
 

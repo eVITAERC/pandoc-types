@@ -26,7 +26,7 @@ Build-type:          Simple
 Cabal-version:       >=1.6
 Source-repository    head
   type:              git
-  location:          git@github.com:timtylin/scholdoc-types.git
+  location:          git://github.com/timtylin/scholdoc-types.git
 Library
   Exposed-modules:   Text.Pandoc.Definition
                      Text.Pandoc.Generic
