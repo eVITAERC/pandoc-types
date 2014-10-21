@@ -114,15 +114,18 @@ module Text.Pandoc.Builder ( module Text.Pandoc.Definition
                            , singleQuoted
                            , doubleQuoted
                            , cite
+                           , numRef
                            , codeWith
                            , code
                            , space
                            , linebreak
                            , math
                            , displayMath
+                           , displayMathWith
                            , rawInline
                            , link
                            , image
+                           , imageWith
                            , note
                            , spanWith
                            , trimInlines
@@ -142,6 +145,10 @@ module Text.Pandoc.Builder ( module Text.Pandoc.Definition
                            , horizontalRule
                            , table
                            , simpleTable
+                           , imageGrid
+                           , figure
+                           , statement
+                           , proof
                            , divWith
                            )
 where
@@ -326,6 +333,9 @@ quoted qt = singleton . Quoted qt . toList
 cite :: [Citation] -> Inlines -> Inlines
 cite cts = singleton . Cite cts . toList
 
+numRef :: NumberedReference -> String -> Inlines
+numRef refspec = singleton . NumRef refspec
+
 -- | Inline code with attributes.
 codeWith :: Attr -> String -> Inlines
 codeWith attrs = singleton . Code attrs
@@ -344,9 +354,13 @@ linebreak = singleton LineBreak
 math :: String -> Inlines
 math = singleton . Math InlineMath
 
+-- | Display math with attributes
+displayMathWith :: Attr -> String -> Inlines
+displayMathWith attrs = singleton . Math (DisplayMath attrs)
+
 -- | Display math
 displayMath :: String -> Inlines
-displayMath = singleton . Math DisplayMath
+displayMath = displayMathWith nullAttr
 
 rawInline :: String -> String -> Inlines
 rawInline format = singleton . RawInline (Format format)
@@ -361,7 +375,15 @@ image :: String  -- ^ URL
       -> String  -- ^ Title
       -> Inlines -- ^ Alt text
       -> Inlines
-image url title x = singleton $ Image (toList x) (url, title)
+image url title x = singleton $ Image nullAttr (toList x) (url, title)
+
+-- | Image element with additional attributes
+imageWith :: Attr
+          -> String  -- ^ URL
+          -> String  -- ^ Title
+          -> Inlines -- ^ Alt text
+          -> Inlines
+imageWith attr url title x = singleton $ Image attr (toList x) (url, title)
 
 note :: Blocks -> Inlines
 note = singleton . Note . toList
@@ -434,6 +456,41 @@ simpleTable :: [Blocks]   -- ^ Headers
             -> Blocks
 simpleTable headers = table mempty (mapConst defaults headers) headers
   where defaults = (AlignDefault, 0)
+
+-- | A column of rows of images, forming a grid (used for figures)
+imageGrid :: [Inlines] -> Blocks
+imageGrid = singleton . ImageGrid . map toList
+
+-- | Generic figure builder for all figure types
+figure :: FigureType
+       -> Attr
+       -> PreparedContent
+       -> Blocks        -- ^ Float content (intrepreted according to FigureType)
+       -> Inlines       -- ^ Caption
+       -> Blocks
+figure figureType attr prepared content caption =
+  singleton $ Figure figureType attr (toList content) prepared (toList caption)
+
+-- | Statements (theorem, lemma, definiton, example, etc)
+statement :: String
+          -> StatementStyle -- ^ Style (Theorem, Standard, Remark, Other)
+          -> (Inlines, String) -- ^ Label (with raw string)
+          -> String   -- ^ Counter name
+          -> Int      -- ^ Hierarchial level (1-6)
+          -> String   -- ^ Default numerical label
+          -> Inlines  -- ^ Caption
+          -> Blocks   -- ^ Text
+          -> Blocks
+statement ident style (lab, rawlab) cntr hlevel numlab capt text =
+  singleton $ Statement
+        (StatementAttr ident style (toList lab, rawlab) cntr hlevel numlab (toList capt))
+        (toList text)
+
+proof :: Inlines  -- ^ Replacement title
+      -> Blocks   -- ^ Text
+      -> Blocks
+proof altTile text =
+  singleton $ Proof (toList altTile) (toList text)
 
 divWith :: Attr -> Blocks -> Blocks
 divWith attr = singleton . Div attr . toList

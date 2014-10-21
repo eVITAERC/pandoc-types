@@ -52,8 +52,15 @@ module Text.Pandoc.Definition ( Pandoc(..)
                               , QuoteType(..)
                               , Target
                               , MathType(..)
+                              , FigureType(..)
+                              , PreparedContent(..)
+                              , noPrepContent
+                              , StatementAttr(..)
+                              , StatementStyle(..)
                               , Citation(..)
                               , CitationMode(..)
+                              , NumberedReference(..)
+                              , NumberedReferenceStyle(..)
                               ) where
 
 import Data.Generics (Data, Typeable)
@@ -66,6 +73,7 @@ import GHC.Generics (Generic, Rep (..))
 import Data.String
 import Data.Char (toLower)
 import Data.Monoid
+import Control.DeepSeq.Generics
 
 data Pandoc = Pandoc Meta [Block]
               deriving (Eq, Ord, Read, Show, Typeable, Data, Generic)
@@ -206,9 +214,32 @@ data Block
                             -- relative column widths (0 = default),
                             -- column headers (each a list of blocks), and
                             -- rows (each a list of lists of blocks)
+    | Figure FigureType Attr [Block] PreparedContent [Inline] -- ^ A floating figure,
+                            -- containing for example images, tables,
+                            -- highlighted code, pseudocode, etc. Differentiated
+                            -- by FigureType. Has attribures, list of float
+                            -- content (typically just 1), a FloatFallback for
+                            -- "pre-compiled" float content,and a caption (inlines)
+                            -- for the whole figure.
+    | ImageGrid [[Inline]]  -- ^ ImageGrid, containing rows of images, intended
+                            -- to be used primarily in Floats. In this context,
+                            -- alt texts will be treated as captions for each
+                            -- individual image.
+    | Statement StatementAttr [Block] -- ^ Standalone statements, can be
+                            -- sequentially numbered and cross-referenced, and
+                            -- optinally may have a Proof block inside its body.
+    | Proof [Inline] [Block] -- ^ Proofs (AMS-style), with an optional
+                            -- alternate title, and proof text
     | Div Attr [Block]      -- ^ Generic block container with attributes
     | Null                  -- ^ Nothing
     deriving (Eq, Ord, Read, Show, Typeable, Data, Generic)
+
+-- | Type of figure, mainly used to differentiate content (i.e., images vs tables).
+--   ImageFigure contains a ImageGrid. TableFigure contains one or more Tables.
+--   LineBlockFigure contains one or more Paras (intended for algorithms and poetry).
+--   ListingFigure contains one or more CodeBlocks.
+data FigureType = ImageFigure | TableFigure | LineBlockFigure | ListingFigure
+     deriving (Show, Eq, Ord, Read, Typeable, Data, Generic)
 
 -- | Type of quotation marks to use in Quoted inline.
 data QuoteType = SingleQuote | DoubleQuote deriving (Show, Eq, Ord, Read, Typeable, Data, Generic)
@@ -217,7 +248,35 @@ data QuoteType = SingleQuote | DoubleQuote deriving (Show, Eq, Ord, Read, Typeab
 type Target = (String, String)
 
 -- | Type of math element (display or inline).
-data MathType = DisplayMath | InlineMath deriving (Show, Eq, Ord, Read, Typeable, Data, Generic)
+data MathType = DisplayMath Attr | InlineMath deriving (Show, Eq, Ord, Read, Typeable, Data, Generic)
+
+-- | Pre-rendered figure content intended to archive final, professionally typeset or drawn
+--   figures from content already described in markdown format (an image and/or latex code)
+data PreparedContent = PreparedContent { preparedImageContent :: Inline -- Image
+                                       , preparedLaTeXContent :: String
+                                        }
+     deriving (Show, Eq, Ord, Read, Typeable, Data, Generic)
+
+noPrepContent :: PreparedContent
+noPrepContent = PreparedContent Space ""
+
+-- | Statement Attributes: identifier, label (inlines with raw), name of counter, hiearchy level, pre-computed numerical label, caption,
+data StatementAttr  = StatementAttr { statementId      :: String
+                                    , statementStyle   :: StatementStyle
+                                    , statementLabel   :: ([Inline], String)
+                                    , statementCounter :: String
+                                    , statementLevel   :: Int
+                                    , statementNum     :: String
+                                    , statementCaption :: [Inline]
+                                    }
+     deriving (Show, Eq, Read, Typeable, Data, Generic)
+
+instance Ord StatementAttr where
+    compare = comparing statementId
+
+-- | Type of statement, rought equivalent to @amsthm@ plain, defninition, and remark
+data StatementStyle = Theorem | Standard | Remark | Other String
+                      deriving (Show, Eq, Ord, Read, Typeable, Data, Generic)
 
 -- | Inline elements.
 data Inline
@@ -230,13 +289,14 @@ data Inline
     | SmallCaps [Inline]    -- ^ Small caps text (list of inlines)
     | Quoted QuoteType [Inline] -- ^ Quoted text (list of inlines)
     | Cite [Citation]  [Inline] -- ^ Citation (list of inlines)
+    | NumRef NumberedReference String -- ^ Reference (literal)
     | Code Attr String      -- ^ Inline code (literal)
     | Space                 -- ^ Inter-word space
     | LineBreak             -- ^ Hard line break
     | Math MathType String  -- ^ TeX math (literal)
     | RawInline Format String -- ^ Raw inline
     | Link [Inline] Target  -- ^ Hyperlink: text (list of inlines), target
-    | Image [Inline] Target -- ^ Image:  alt text (list of inlines), target
+    | Image Attr [Inline] Target -- ^ Image  alt text (list of inlines), target
     | Note [Block]          -- ^ Footnote or endnote
     | Span Attr [Inline]    -- ^ Generic inline container with attributes
     deriving (Show, Eq, Ord, Read, Typeable, Data, Generic)
@@ -255,6 +315,18 @@ instance Ord Citation where
 
 data CitationMode = AuthorInText | SuppressAuthor | NormalCitation
                     deriving (Show, Eq, Ord, Read, Typeable, Data, Generic)
+
+data NumberedReference = NumberedReference { numRefId    :: String
+                                           , numRefStyle :: NumberedReferenceStyle
+                                           , numRefLabel :: [Inline]
+                                           }
+                         deriving (Show, Eq, Read, Typeable, Data, Generic)
+
+instance Ord NumberedReference where
+    compare = comparing numRefId
+
+data NumberedReferenceStyle = PlainNumRef | ParenthesesNumRef
+                              deriving (Show, Eq, Ord, Read, Typeable, Data, Generic)
 
 -- derive generic instances of FromJSON, ToJSON:
 
@@ -292,6 +364,36 @@ instance ToJSON CitationMode
 instance FromJSON Citation
   where parseJSON = parseJSON'
 instance ToJSON Citation
+  where toJSON = toJSON'
+
+instance FromJSON NumberedReferenceStyle
+  where parseJSON = parseJSON'
+instance ToJSON NumberedReferenceStyle
+  where toJSON = toJSON'
+
+instance FromJSON NumberedReference
+  where parseJSON = parseJSON'
+instance ToJSON NumberedReference
+  where toJSON = toJSON'
+
+instance FromJSON FigureType
+  where parseJSON = parseJSON'
+instance ToJSON FigureType
+  where toJSON = toJSON'
+
+instance FromJSON PreparedContent
+  where parseJSON = parseJSON'
+instance ToJSON PreparedContent
+  where toJSON = toJSON'
+
+instance FromJSON StatementAttr
+  where parseJSON = parseJSON'
+instance ToJSON StatementAttr
+  where toJSON = toJSON'
+
+instance FromJSON StatementStyle
+  where parseJSON = parseJSON'
+instance ToJSON StatementStyle
   where toJSON = toJSON'
 
 instance FromJSON QuoteType
@@ -338,3 +440,24 @@ instance FromJSON Pandoc
   where parseJSON = parseJSON'
 instance ToJSON Pandoc
   where toJSON = toJSON'
+
+-- Instances for deepseq
+instance NFData MetaValue where rnf = genericRnf
+instance NFData Meta where rnf = genericRnf
+instance NFData Citation where rnf = genericRnf
+instance NFData Alignment where rnf = genericRnf
+instance NFData Inline where rnf = genericRnf
+instance NFData FigureType where rnf = genericRnf
+instance NFData MathType where rnf = genericRnf
+instance NFData PreparedContent where rnf = genericRnf
+instance NFData StatementAttr where rnf = genericRnf
+instance NFData StatementStyle where rnf = genericRnf
+instance NFData Format where rnf = genericRnf
+instance NFData CitationMode where rnf = genericRnf
+instance NFData NumberedReference where rnf = genericRnf
+instance NFData NumberedReferenceStyle where rnf = genericRnf
+instance NFData QuoteType where rnf = genericRnf
+instance NFData ListNumberDelim where rnf = genericRnf
+instance NFData ListNumberStyle where rnf = genericRnf
+instance NFData Block where rnf = genericRnf
+instance NFData Pandoc where rnf = genericRnf

@@ -108,14 +108,15 @@ instance Walkable Inline Inline where
   walk f (Superscript xs) = f $ Superscript (walk f xs)
   walk f (SmallCaps xs)   = f $ SmallCaps (walk f xs)
   walk f (Quoted qt xs)   = f $ Quoted qt (walk f xs)
-  walk f (Cite cs xs)     = f $ Cite cs (walk f xs)
+  walk f (Cite cs xs)     = f $ Cite (walk f cs) (walk f xs)
+  walk f (NumRef r s)     = f $ NumRef r s
   walk f (Code attr s)    = f $ Code attr s
   walk f Space            = f Space
   walk f LineBreak        = f LineBreak
   walk f (Math mt s)      = f (Math mt s)
   walk f (RawInline t s)  = f $ RawInline t s
   walk f (Link xs t)      = f $ Link (walk f xs) t
-  walk f (Image xs t)     = f $ Image (walk f xs) t
+  walk f (Image atr xs t) = f $ Image atr (walk f xs) t
   walk f (Note bs)        = f $ Note (walk f bs)
   walk f (Span attr xs)   = f $ Span attr (walk f xs)
 
@@ -127,14 +128,17 @@ instance Walkable Inline Inline where
   walkM f (Superscript xs)= Superscript <$> walkM f xs >>= f
   walkM f (SmallCaps xs)  = SmallCaps <$> walkM f xs >>= f
   walkM f (Quoted qt xs)  = Quoted qt <$> walkM f xs >>= f
-  walkM f (Cite cs xs)    = Cite cs <$> walkM f xs >>= f
+  walkM f (Cite cs xs)    = do cs' <- walkM f cs
+                               xs' <- walkM f xs
+                               f $ Cite cs' xs'
+  walkM f (NumRef r s)    = f $ NumRef r s
   walkM f (Code attr s)   = f $ Code attr s
   walkM f Space           = f Space
   walkM f LineBreak       = f LineBreak
   walkM f (Math mt s)     = f (Math mt s)
   walkM f (RawInline t s) = f $ RawInline t s
   walkM f (Link xs t)     = Link <$> walkM f xs >>= f . ($ t)
-  walkM f (Image xs t)    = Image <$> walkM f xs >>= f . ($ t)
+  walkM f (Image atr xs t)= Image atr <$> walkM f xs >>= f . ($ t)
   walkM f (Note bs)       = Note <$> walkM f bs >>= f
   walkM f (Span attr xs)  = Span attr <$> walkM f xs >>= f
 
@@ -146,14 +150,15 @@ instance Walkable Inline Inline where
   query f (Superscript xs)= f (Superscript xs) <> query f xs
   query f (SmallCaps xs)  = f (SmallCaps xs) <> query f xs
   query f (Quoted qt xs)  = f (Quoted qt xs) <> query f xs
-  query f (Cite cs xs)    = f (Cite cs xs) <> query f xs
+  query f (Cite cs xs)    = f (Cite cs xs) <> query f cs <> query f xs
+  query f (NumRef r s)    = f (NumRef r s)
   query f (Code attr s)   = f (Code attr s)
   query f Space           = f Space
   query f LineBreak       = f LineBreak
   query f (Math mt s)     = f (Math mt s)
   query f (RawInline t s) = f (RawInline t s)
   query f (Link xs t)     = f (Link xs t) <> query f xs
-  query f (Image xs t)    = f (Image xs t) <> query f xs
+  query f (Image atr xs t)= f (Image atr xs t) <> query f xs
   query f (Note bs)       = f (Note bs) <> query f bs
   query f (Span attr xs)  = f (Span attr xs) <> query f xs
 
@@ -169,6 +174,12 @@ instance Walkable Inline Block where
   walk f (Header lev attr xs)     = Header lev attr $ walk f xs
   walk f HorizontalRule           = HorizontalRule
   walk f (Table capt as ws hs rs) = Table (walk f capt) as ws (walk f hs) (walk f rs)
+  walk f (Figure ft attr cs (PreparedContent im lt) capt) =
+    Figure ft attr (walk f cs) (PreparedContent (walk f im) lt) (walk f capt)
+  walk f (ImageGrid xs)           = ImageGrid $ walk f xs
+  walk f (Statement (StatementAttr i sty (lb, lbr) ct lv n cp) bs) =
+    Statement (StatementAttr i sty (walk f lb, lbr) ct lv n (walk f cp)) (walk f bs)
+  walk f (Proof cpt cs)           = Proof (walk f cpt) (walk f cs)
   walk f (Div attr bs)            = Div attr (walk f bs)
   walk f Null                     = Null
 
@@ -187,6 +198,24 @@ instance Walkable Inline Block where
                                      hs' <- walkM f hs
                                      rs' <- walkM f rs
                                      return $ Table capt' as ws hs' rs'
+  walkM f (Figure ft attr cs (PreparedContent im lt) capt) = do
+                                     cs' <- walkM f cs
+                                     im' <- walkM f im
+                                     capt' <- walkM f capt
+                                     return $ Figure ft attr cs'
+                                                (PreparedContent im' lt) capt'
+  walkM f (ImageGrid xs)           = ImageGrid <$> walkM f xs
+  walkM f (Statement (StatementAttr i sty (lb, lbr) ct lv n cp) bs) = do
+                                     lb' <- walkM f lb
+                                     cp' <- walkM f cp
+                                     bs' <- walkM f bs
+                                     return $ Statement
+                                                (StatementAttr i sty (lb', lbr)
+                                                  ct lv n cp') bs'
+  walkM f (Proof cpt cs)           = do
+                                     cpt' <- walkM f cpt
+                                     cs' <- walkM f cs
+                                     return $ Proof cpt' cs'
   walkM f (Div attr bs)            = Div attr <$> (walkM f bs)
   walkM f Null                     = return Null
 
@@ -201,10 +230,16 @@ instance Walkable Inline Block where
   query f (Header lev attr xs)     = query f xs
   query f HorizontalRule           = mempty
   query f (Table capt as ws hs rs) = query f capt <> query f hs <> query f rs
+  query f (Figure ft attr cs (PreparedContent im lt) capt) =
+                                     query f cs <> query f im <> query f capt
+  query f (ImageGrid xs)           = query f xs
+  query f (Statement (StatementAttr i sty (lb, lbr) ct lv n cp) bs) =
+                                     query f lb <> query f cp <> query f bs
+  query f (Proof cpt cs)           = query f cpt <> query f cs
   query f (Div attr bs)            = query f bs
   query f Null                     = mempty
 
-instance Walkable Block Block where
+instance Walkable Block Block where 
   walk f (Para xs)                = f $ Para $ walk f xs
   walk f (Plain xs)               = f $ Plain $ walk f xs
   walk f (CodeBlock attr s)       = f $ CodeBlock attr s
@@ -217,6 +252,16 @@ instance Walkable Block Block where
   walk f HorizontalRule           = f $ HorizontalRule
   walk f (Table capt as ws hs rs) = f $ Table (walk f capt) as ws (walk f hs)
                                                      (walk f rs)
+  walk f (Figure ft attr cs (PreparedContent im lt) capt) =
+                                    f $ Figure ft attr (walk f cs)
+                                         (PreparedContent (walk f im) lt) (walk f capt)
+  walk f (ImageGrid xs)           = f $ ImageGrid $ walk f xs
+  walk f (Statement (StatementAttr i sty (lb, lbr) ct lv n cp) bs) =
+                                    f $ Statement
+                                          (StatementAttr i sty (walk f lb, lbr)
+                                            ct lv n (walk f cp))
+                                          (walk f bs)
+  walk f (Proof cpt cs)           = f $ Proof (walk f cpt) (walk f cs)
   walk f (Div attr bs)            = f $ Div attr (walk f bs)
   walk f Null                     = Null
 
@@ -234,6 +279,17 @@ instance Walkable Block Block where
                                         hs' <- walkM f hs
                                         rs' <- walkM f rs
                                         f $ Table capt' as ws hs' rs'
+  walkM f (Figure ft attr cs (PreparedContent im lt) capt) = do
+                                     cs' <- walkM f cs
+                                     im' <- walkM f im
+                                     capt' <- walkM f capt
+                                     f $ Figure ft attr cs'
+                                           (PreparedContent im' lt) capt'
+  walkM f (ImageGrid xs)           = ImageGrid <$> walkM f xs >>= f
+  walkM f (Statement at bs)        = Statement at <$> walkM f bs >>= f
+  walkM f (Proof cpt cs)           = do cpt' <- walkM f cpt
+                                        cs' <- walkM f cs
+                                        f $ Proof cpt' cs'
   walkM f (Div attr bs)            = Div attr <$> walkM f bs >>= f
   walkM f Null                     = f Null
 
@@ -249,6 +305,12 @@ instance Walkable Block Block where
   query f HorizontalRule           = f $ HorizontalRule
   query f (Table capt as ws hs rs) = f (Table capt as ws hs rs) <>
                                        query f capt <> query f hs <> query f rs
+  query f (Figure ft attr cs pc@(PreparedContent im lt) capt) =
+                                     f (Figure ft attr cs pc capt) <>
+                                       query f cs <> query f im <> query f capt
+  query f (ImageGrid xs)           = f (ImageGrid xs) <> query f xs
+  query f (Statement at bs)        = f (Statement at bs) <> query f bs
+  query f (Proof cpt cs)           = f (Proof cpt cs) <> query f cpt <> query f cs
   query f (Div attr bs)            = f (Div attr bs) <> query f bs
   query f Null                     = f Null
 
@@ -261,14 +323,15 @@ instance Walkable Block Inline where
   walk f (Superscript xs)= Superscript (walk f xs)
   walk f (SmallCaps xs)  = SmallCaps (walk f xs)
   walk f (Quoted qt xs)  = Quoted qt (walk f xs)
-  walk f (Cite cs xs)    = Cite cs (walk f xs)
+  walk f (Cite cs xs)    = Cite (walk f cs) (walk f xs)
+  walk f (NumRef r s)    = NumRef r s
   walk f (Code attr s)   = Code attr s
   walk f Space           = Space
   walk f LineBreak       = LineBreak
   walk f (Math mt s)     = Math mt s
   walk f (RawInline t s) = RawInline t s
   walk f (Link xs t)     = Link (walk f xs) t
-  walk f (Image xs t)    = Image (walk f xs) t
+  walk f (Image atr xs t)= Image atr (walk f xs) t
   walk f (Note bs)       = Note (walk f bs)
   walk f (Span attr xs)  = Span attr (walk f xs)
 
@@ -280,14 +343,17 @@ instance Walkable Block Inline where
   walkM f (Superscript xs)= Superscript <$> walkM f xs
   walkM f (SmallCaps xs)  = SmallCaps <$> walkM f xs
   walkM f (Quoted qt xs)  = Quoted qt <$> walkM f xs
-  walkM f (Cite cs xs)    = Cite cs <$> walkM f xs
+  walkM f (Cite cs xs)    = do cs' <- walkM f cs
+                               xs' <- walkM f xs
+                               return $ Cite cs' xs'
+  walkM f (NumRef r s)    = return $ NumRef r s
   walkM f (Code attr s)   = return $ Code attr s
   walkM f Space           = return $ Space
   walkM f LineBreak       = return $ LineBreak
   walkM f (Math mt s)     = return $ Math mt s
   walkM f (RawInline t s) = return $ RawInline t s
   walkM f (Link xs t)     = (\lab -> Link lab t) <$> walkM f xs
-  walkM f (Image xs t)    = (\lab -> Image lab t) <$> walkM f xs
+  walkM f (Image atr xs t)= (\lab -> Image atr lab t) <$> walkM f xs
   walkM f (Note bs)       = Note <$> walkM f bs
   walkM f (Span attr xs)  = Span attr <$> walkM f xs
 
@@ -299,14 +365,15 @@ instance Walkable Block Inline where
   query f (Superscript xs)= query f xs
   query f (SmallCaps xs)  = query f xs
   query f (Quoted qt xs)  = query f xs
-  query f (Cite cs xs)    = query f xs
+  query f (Cite cs xs)    = query f cs <> query f xs
+  query f (NumRef r s)    = mempty
   query f (Code attr s)   = mempty
   query f Space           = mempty
   query f LineBreak       = mempty
   query f (Math mt s)     = mempty
   query f (RawInline t s) = mempty
   query f (Link xs t)     = query f xs
-  query f (Image xs t)    = query f xs
+  query f (Image atr xs t)= query f xs
   query f (Note bs)       = query f bs
   query f (Span attr xs)  = query f xs
 
@@ -387,6 +454,26 @@ instance Walkable Block MetaValue where
   query f (MetaInlines xs) = query f xs
   query f (MetaBlocks bs)  = query f bs
   query f (MetaMap m)      = query f m
+
+instance Walkable Inline Citation where
+  walk f (Citation id' pref suff mode notenum hash) =
+    Citation id' (walk f pref) (walk f suff) mode notenum hash
+  walkM f (Citation id' pref suff mode notenum hash) =
+    do pref' <- walkM f pref
+       suff' <- walkM f suff
+       return $ Citation id' pref' suff' mode notenum hash
+  query f (Citation id' pref suff mode notenum hash) =
+    query f pref <> query f suff
+
+instance Walkable Block Citation where
+  walk f (Citation id' pref suff mode notenum hash) =
+    Citation id' (walk f pref) (walk f suff) mode notenum hash
+  walkM f (Citation id' pref suff mode notenum hash) =
+    do pref' <- walkM f pref
+       suff' <- walkM f suff
+       return $ Citation id' pref' suff' mode notenum hash
+  query f (Citation id' pref suff mode notenum hash) =
+    query f pref <> query f suff
 
 instance Walkable a b => Walkable a [b] where
   walk f xs  = map (walk f) xs
