@@ -23,5 +23,5 @@ This package is currently up to date with [Pandoc-Types][pandoc-types] version
 [scholdoc]: https://github.com/timtylin/scholdoc
 [pandoc-types]: https://github.com/jgm/pandoc-types
 [travis_stat]: https://travis-ci.org/timtylin/scholdoc-types
-[scholarly-devel-travisimage]: https://travis-ci.org/timtylin/scholdoc-types.svg?branch=scholarly-devel
-[scholarly-travisimage]: https://travis-ci.org/timtylin/scholdoc-types.svg?branch=scholarly
+[scholarly-devel-travisimage]: https://travis-ci.org/timtylin/scholdoc-types.svg?branch=master
+[scholarly-travisimage]: https://travis-ci.org/timtylin/scholdoc-types.svg?branch=stable
