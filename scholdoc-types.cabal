@@ -14,7 +14,7 @@ Description:         This package is a fork of @pandoc-types@ intended to
                      please visit
                      <http://hackage.haskell.org/package/pandoc-types>
 
-Homepage:            http://scholarlymarkdown.com
+Homepage:            http://scholdoc.scholarlymarkdown.com
 License:             GPL
 License-file:        COPYING
 Author:              Tim T.Y. Lin
