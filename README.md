@@ -3,7 +3,7 @@ Scholdoc-Types
 
 ### Document structure for [Scholdoc][scholdoc]
 
-**Current stable version:** 0.1.3
+**Current stable version:** 0.1.3.1
 
 **Development build status** [![build status][scholarly-devel-travisimage]][travis_stat]  
 **Stable build status** [![build status][scholarly-travisimage]][travis_stat]
